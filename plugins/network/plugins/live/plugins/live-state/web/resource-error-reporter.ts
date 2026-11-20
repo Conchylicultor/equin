@@ -19,7 +19,9 @@ export interface ResourceErrorInfo {
   error: ResourceError;
 }
 
-export const resourceErrorReportSink = defineReportSink<ResourceErrorInfo>();
+export const resourceErrorReportSink = defineReportSink<ResourceErrorInfo>(
+  "network/plugins/live/plugins/live-state:resourceErrorReportSink",
+);
 
 /** A tuple currently failing, as the health report's row counts them. */
 export interface FailingResource {

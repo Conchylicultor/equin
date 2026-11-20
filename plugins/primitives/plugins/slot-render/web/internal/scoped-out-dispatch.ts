@@ -23,7 +23,9 @@ export interface ScopedOutDispatchFault {
  * key, plugin, scope) per page. slot-render must not import `reports`, so the
  * collector (`reports/scoped-out-dispatch`) drains it.
  */
-export const scopedOutDispatchSink = defineReportSink<ScopedOutDispatchFault>();
+export const scopedOutDispatchSink = defineReportSink<ScopedOutDispatchFault>(
+  "primitives/plugins/slot-render:scopedOutDispatchSink",
+);
 
 const emitted = new Set<string>();
 

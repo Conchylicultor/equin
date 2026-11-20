@@ -11,8 +11,23 @@ import {
 } from "@plugins/framework/plugins/plugin-loader/core";
 import { getBootMode, setBootMode, setRegisteringPlugin } from "./boot-mode";
 import { runBootHook } from "./profiler-hooks";
-import { assertHostServices } from "./host-service";
-import { collectContributions } from "./contributions";
+import {
+  assertHostServices,
+  declaredHostServiceIds,
+  hostServicesProvidedBy,
+} from "./host-service";
+import {
+  collectContributions,
+  declarePartialStart,
+  definedCompanionKinds,
+} from "./contributions";
+import { declaredHandledSinkIds } from "@plugins/primitives/plugins/report-sink/core";
+import {
+  graphNodeOf,
+  missingContributors,
+  resolveStartSet,
+  type ContributorTable,
+} from "./start-set";
 import { reportServerError } from "./error-reporter";
 import {
   journalPending,
@@ -99,6 +114,14 @@ export interface ServerRegistryEntry {
 
 export type BootSpec = {
   entries: ServerRegistryEntry[];
+  /**
+   * Start only what one piece of work needs, not every entry: `entries` is
+   * then the whole registry, and the set started is resolved from it
+   * (`resolveStartSet`) — and every complete list a reader reads that the set
+   * did not start all the contributors of throws (`declarePartialStart`).
+   * Absent: every entry starts.
+   */
+  start?: PartialStartSpec;
 } & (
   | {
       mode: "serve";
@@ -136,7 +159,10 @@ export async function bootPluginGraph(
 ): Promise<LoadedServerPlugin[]> {
   // Before any plugin loads, so every phase hook can ask which mode it runs in.
   setBootMode(spec.mode);
-  const ordered = await loadServerPlugins(spec.entries);
+  const ordered =
+    spec.start === undefined
+      ? await loadServerPlugins(spec.entries)
+      : await loadStartSet(spec.entries, spec.start);
 
   // ── Contributions ──────────────────────────────────────────────
   // Collect declarative contributions from all plugins — static data on the
@@ -169,7 +195,12 @@ export async function bootPluginGraph(
   // full contributor set is known, nothing has served yet, and the ready
   // barrier — whose change feed rebuilds triggers from the route layout — has
   // not run. In both modes, and before the preload assert reads the registry.
-  bindDeferredResources();
+  //
+  // Not in a partial start (a job that started only what it needs): binding
+  // reads every contributor of a collection's columns, which only a process
+  // that serves or reads resources needs, and a job serves none. A deferred
+  // resource it then reads anyway throws, naming the key ("not bound").
+  if (spec.start === undefined) bindDeferredResources();
 
   // Every server module has registered its resources (module eval) and every
   // `Resource.Declare` is now collected, so a preloaded resource whose plugin
@@ -181,7 +212,10 @@ export async function bootPluginGraph(
   // A pure in-memory read, so it costs an `exec` child nothing, and it lands
   // before serve installs its routes, so such a graph never serves a request
   // (its early socket only ever answers 503, and the throw exits the process).
-  assertPreloadedResourcesDeclared();
+  // A property of the code, not of this process: a partial start (which
+  // serves nothing and holds only some Declares) leaves it to the serving
+  // boot and the build, which check the whole graph.
+  if (spec.start === undefined) assertPreloadedResourcesDeclared();
 
   if (spec.mode === "serve") await spec.beforeReadyBarrier(ordered);
 
@@ -339,6 +373,74 @@ export async function loadServerPlugins(
   const ordered = topoSortPlugins([...byPath.values()]);
   recordMemoryCheckpoint("after-import");
   return ordered;
+}
+
+/** What a partial start starts from (`BootSpec.start`). */
+export interface PartialStartSpec {
+  /** The starting plugin, as its `pluginPath` (`database/plugins/fork`). */
+  readonly root: string;
+  /** The contribution kinds (debug names) the work reads whole. */
+  readonly reads: readonly string[];
+  /** What started this process, in words, for the list rule's error. */
+  readonly label: string;
+  /** How a reader of a list makes it start whole, for the list rule's error. */
+  readonly fix: (kind: string) => string;
+  /** The build's contributor table (`contributors.generated.ts`). */
+  readonly contributors: ContributorTable;
+}
+
+/**
+ * Load the set a partial start needs (`resolveStartSet`), adding the provider
+ * of every host service its modules declare and nothing in it provides — which
+ * only loading can tell — to a fixpoint (each round loads the modules it adds,
+ * which may declare more). Then declare the partial start, so the list rule
+ * guards every complete list this set does not wholly hold.
+ */
+async function loadStartSet(
+  all: readonly ServerRegistryEntry[],
+  start: PartialStartSpec,
+): Promise<LoadedServerPlugin[]> {
+  let hostServices: string[] = [];
+  let sinks: string[] = [];
+  let companions: string[] = [];
+  for (;;) {
+    const set = resolveStartSet({
+      entries: all,
+      roots: [start.root],
+      reads: [...start.reads, ...companions],
+      hostServices,
+      sinks,
+      contributors: start.contributors,
+    });
+    const ordered = await loadServerPlugins(set.entries);
+    const provided = new Set(
+      hostServicesProvidedBy(ordered.flatMap((p) => p.contributions ?? [])),
+    );
+    const missing = declaredHostServiceIds().filter((id) => !provided.has(id));
+    // What the loaded modules declared: a round that loads more may declare
+    // more, so the loop runs until a round adds nothing (both only grow).
+    const nextSinks = declaredHandledSinkIds();
+    const nextCompanions = definedCompanionKinds();
+    const grew =
+      nextSinks.length !== sinks.length ||
+      nextCompanions.length !== companions.length;
+    sinks = nextSinks;
+    companions = nextCompanions;
+    if (missing.length === 0 && !grew) {
+      const registry = new Set(all.map(graphNodeOf));
+      const started = new Set(set.entries.map(graphNodeOf));
+      declarePartialStart({
+        startedFrom: start.label,
+        started: started.size,
+        total: registry.size,
+        missingContributors: (kind) =>
+          missingContributors(start.contributors, kind, registry, started),
+        fix: start.fix,
+      });
+      return ordered;
+    }
+    hostServices = [...hostServices, ...missing];
+  }
 }
 
 /**

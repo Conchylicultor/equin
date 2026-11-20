@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
+  isPartialStart,
   dropPendingPersists,
   persistedKeys,
   recomputeResource,
@@ -86,6 +87,12 @@ export default {
   // handled EXPLICITLY inside `initSnapshotSubsystem` (catch + log + continue) — it
   // never throws, so a snapshot-table failure can't abort boot. See boot-init.ts.
   async onReadyBlocking({ schema }) {
+    // A job that started only the plugins it needs (server-core's partial
+    // start) persists nothing and serves nothing: what this hook does outside
+    // the owner's init — boot-order probes and A6, a check of the code's
+    // declarations — is the serving boot's, over the whole graph, and the
+    // relation bases it probes are not built in such a process (change-feed).
+    if (schema.kind !== "owner" && isPartialStart()) return;
     // A20: the boot schema layer — and with it every rollup's reconcile — has
     // committed before L2 reads anything (`database` is a dependsOn edge, so
     // its onReadyBlocking ran first); `healedRollups()` throws otherwise, a

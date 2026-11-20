@@ -25099,6 +25099,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "fork-undeclared-schema"
         - Uses:
           - `database/admin.describeUndeclaredSchema`
+          - `database/admin.ExcludeFromFork`
+          - `database/admin.ExcludeSchemaDataFromFork`
           - `database/admin.forkDatabase`
           - `database/admin.forkExclusions`
           - `database/admin.ForkPlanError`
@@ -29558,17 +29560,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "worktree-reap-failed"
           - `resource.declare` "debug.worktree-cleanup.worktrees"
           - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-        - Uses: 44 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+        - Uses: 45 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
           - `infra/worktree` ×15
           - `database/admin` ×4
           - `infra/worktree/reclaim` ×4
           - `tasks/tasks-core` ×4
           - `infra/endpoints` ×3
+          - `conversations/workspace` ×2
           - `infra/host/host-read-pool` ×2
           - `infra/jobs/supervised-job` ×2
           - `infra/paths` ×2
           - `network/live` ×2
-          - `conversations/workspace.announceWorkspacesReclaimed`
           - `infra/ndjson-stream.ndjsonResponse`
           - `infra/warmup.defineWarmup`
           - `infra/worktree/backend-hold.holdBackendDown`
@@ -32733,14 +32735,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 99 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+        - Imported by: 100 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
           - `plugin-meta` ×21
           - `apps` ×15
           - `tasks` ×12
           - `framework` ×11
           - `conversations` ×7
           - `debug` ×5
-          - `infra` ×4
+          - `infra` ×5
           - `build` ×3
           - `config_v2` ×3
           - `page` ×3
@@ -32867,6 +32869,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/resource-runtime.ResourceGuardError`
           - `packages/error-subject.crashFieldsOf`
           - `packages/string-hash.hash64`
+          - `primitives/report-sink.declaredHandledSinkIds`
           - `primitives/report-sink.defineReportSink`
           - `primitives/report-sink.defineRequestSink`
         - Exports (types):
@@ -32880,6 +32883,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ChangeSource`
           - `ComposedEntry`
           - `ComposedHome`
+          - `ContributorTable`
           - `DependsOnEntry`
           - `EndpointHttpHandler`
           - `EpochHandoffHooks`
@@ -32900,6 +32904,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MachinePluginDefinition`
           - `MemoryCheckpoint`
           - `MemoryProbe`
+          - `PartialList`
           - `PeerUsage`
           - `PeerUsageProbe`
           - `PersistedBase`
@@ -32942,6 +32947,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServerResourceOptions`
           - `SinkHandler`
           - `Span`
+          - `StartSet`
+          - `StartSetInput`
           - `TableChange`
           - `TableLayoutRequirement`
           - `WsData`
@@ -32965,6 +32972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `exitWithFatalReport`
           - `getBootMode`
           - `getProfilingData`
+          - `graphNodeOf`
           - `handleResourceHttp`
           - `handOffEpoch`
           - `heapMemory`
@@ -32976,6 +32984,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installMemoryProbe`
           - `installPeerUsageProbe`
           - `installSnapHash`
+          - `isPartialStart`
           - `isProcessCrashHandled`
           - `isServerReady`
           - `keptSnapshotValue`
@@ -32992,6 +33001,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `onResourceDelivery`
           - `onResourcePush`
           - `ownCpuMs`
+          - `PartialListReadError`
           - `peerProcUsage`
           - `PENDING_JOURNALED`
           - `persistedDefinitions`
@@ -33009,6 +33019,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `relationResourceReads`
           - `reportServer`
           - `reportServerError`
+          - `resolveStartSet`
           - `Resource`
           - `routedTableRequirements`
           - `routedTablesOf`
@@ -33668,6 +33679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by: `framework/cli/check`
             - **`reorderable-slots-in-sync`**
+            - **`server-contributors-in-sync`**
             - **`snapshot-chain-intact`**
             - **`source-analysis`**
               - Cross-plugin:
@@ -33917,6 +33929,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `generatePluginDocs`
               - `generatePluginRegistry`
               - `generateReorderableSlots`
+              - `generateServerContributors`
               - `generateSpaceRamp`
               - `generateStaticHosts`
               - `generateTokenGroupVars`
@@ -33966,6 +33979,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderPluginClaudeMd`
               - `renderPluginReferenceMd`
               - `renderReorderableSlotsManifest`
+              - `renderServerContributors`
               - `renderSpaceRamp`
               - `renderStaticHostFile`
               - `renderThemeDeclarationsManifest`
@@ -33981,6 +33995,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `scopedOnlyWebPlugins`
               - `seedAuthoredOverrides`
               - `serverBarrelBlockers`
+              - `serverContributorsPath`
               - `setDefaultOriginAnnotations`
               - `setDefaultOriginAnnotationsPreparer`
               - `setDefaultOriginDefaults`
@@ -57941,6 +57956,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReportSink`
           - `RequestSink`
         - Exports (values):
+          - `declaredHandledSinkIds`
           - `defineObservationSink`
           - `defineReportSink`
           - `defineRequestSink`

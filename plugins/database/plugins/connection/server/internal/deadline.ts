@@ -121,7 +121,9 @@ export function formatDeadlineLogLine(event: QueryDeadlineEvent): string {
 // registers the handler (same shape as jobs → jobs/deadline-audit).
 // Fire-and-forget, and emissions before the handler registers are held, not
 // dropped.
-export const queryDeadlineSink = defineReportSink<QueryDeadlineEvent>();
+export const queryDeadlineSink = defineReportSink<QueryDeadlineEvent>(
+  "database/plugins/connection:queryDeadlineSink",
+);
 
 /**
  * A database call got no reply within its deadline. The caller's promise (or

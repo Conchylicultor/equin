@@ -27,6 +27,7 @@ import { superviseRuns, type RunVerdict } from "./loop";
 import {
   defineRunBodyTask,
   type RunBodyTask,
+  type ReadList,
   type SupervisedRunContext,
 } from "./run-body";
 import {
@@ -230,20 +231,36 @@ interface ArgvBody<S extends z.ZodType> {
   run?: never;
   /** Only a `run` body's child is ours to admit before it boots. */
   admission?: never;
+  /** Only a `run` body's child is booted by this primitive. */
+  reads?: never;
 }
 
 /** A child that runs in-process code — backup, the reaper, the fork. */
-interface RunBody<S extends z.ZodType> {
+interface RunBody<S extends z.ZodType, R extends ReadList> {
   /**
    * The work, run in its own process: `./equin supervised-exec <name>`
    * boots the plugin graph in `exec` mode and calls this with the job's input.
-   * Contributions, config and the database are all present, exactly as in the
-   * backend. `log` writes to the transcript.
+   * Config and the database are present, as in the backend. `log` writes to
+   * the transcript.
    *
    * With the built-in ledger, a throw records `error_message` and `retryable`
    * (false for a `NonRetryableError`) on the run's row before the child exits 1.
    */
-  run(input: z.infer<S>, ctx: SupervisedRunContext): Promise<void>;
+  run(input: z.infer<S>, ctx: SupervisedRunContext<R>): Promise<void>;
+  /**
+   * The contributed lists the body reads whole — and, by declaring them, that
+   * its child starts only what it needs: the plugin that registers this job,
+   * what that plugin imports, and every contributor of these lists
+   * (server-core's `resolveStartSet`), instead of the whole app. The body
+   * reads them through `ctx.read(List)`, which accepts only a declared list
+   * (a tsc error otherwise). Any other complete list read while the child
+   * starts or runs throws, naming the list, the plugins it did not start and
+   * this field (the list rule) — never a silent partial list.
+   *
+   * Absent: the child starts the whole app (every job until it is moved).
+   * `[]`: it reads no list whole.
+   */
+  reads?: R;
   /**
    * A host pool (`host-admission`'s `HOST_POOLS`) the child takes a slot of
    * BEFORE it boots and holds until it exits. A booted child holds database
@@ -302,6 +319,7 @@ interface StepsBody<S extends z.ZodType> {
   argv?: never;
   run?: never;
   admission?: never;
+  reads?: never;
   lock?: never;
   /** A sequence decides its own retries. */
   runAttempts?: never;
@@ -320,9 +338,10 @@ interface StepsBody<S extends z.ZodType> {
 export type DefineSupervisedJobSpec<
   N extends string,
   S extends z.ZodType,
+  R extends ReadList = ReadList,
 > = SupervisedJobBase<N, S> &
   (
-    | (SingleChildCommon<S> & (ArgvBody<S> | RunBody<S>) & LedgerChoice<S>)
+    | (SingleChildCommon<S> & (ArgvBody<S> | RunBody<S, R>) & LedgerChoice<S>)
     | StepsBody<S>
   );
 
@@ -367,9 +386,11 @@ interface ResolvedLedger<I> {
   onReattach?: (runId: string) => void;
 }
 
-function resolveLedger<N extends string, S extends z.ZodType>(
-  spec: DefineSupervisedJobSpec<N, S>,
-): ResolvedLedger<z.infer<S>> {
+function resolveLedger<
+  N extends string,
+  S extends z.ZodType,
+  R extends ReadList,
+>(spec: DefineSupervisedJobSpec<N, S, R>): ResolvedLedger<z.infer<S>> {
   const own = spec.ledger;
   if (own !== undefined) {
     return {
@@ -428,9 +449,11 @@ function resolveLedger<N extends string, S extends z.ZodType>(
  * `hold` is `instant` for a single-child job and not a consumer's to choose:
  * one dispatch claims, spawns detached and suspends — milliseconds.
  */
-export function defineSupervisedJob<N extends string, S extends z.ZodType>(
-  spec: DefineSupervisedJobSpec<N, S>,
-): SupervisedJob<N, S> {
+export function defineSupervisedJob<
+  N extends string,
+  S extends z.ZodType,
+  const R extends ReadList = [],
+>(spec: DefineSupervisedJobSpec<N, S, R>): SupervisedJob<N, S> {
   const ledger = resolveLedger(spec);
 
   const kind = defineSupervisedRunKind({
@@ -480,6 +503,7 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
         name: spec.name,
         input: spec.input,
         run: spec.run,
+        reads: spec.reads,
         recordErrors: ledger.builtin,
         admission: spec.admission,
       });

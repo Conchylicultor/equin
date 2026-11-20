@@ -14,4 +14,6 @@ export interface EndpointErrorInfo {
 // coverage guard missed) and never inspects the shape — the registered
 // reporter decides which errors are worth recording.
 // The sink stays domain-agnostic so the primitive never depends on `reports`.
-export const endpointErrorSink = defineReportSink<EndpointErrorInfo>();
+export const endpointErrorSink = defineReportSink<EndpointErrorInfo>(
+  "infra/plugins/endpoints:endpointErrorSink",
+);

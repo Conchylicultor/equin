@@ -190,7 +190,7 @@ fetcher (`useFetchEndpoint`, a `FetchEndpoint`, `useEndpointMutation`) — a mod
   declaring plugin of each kind is read statically (parse-utils'
   `parseServerContributionDeclarations` over every `defineServerContribution`
   call — the same reading the contributions facet takes server companion
-  kinds from); a kind declared `absentOnHost: { reason }` (`Trigger`, `ReportKind`:
+  kinds from); a kind declared `partial: { reason }` (`Trigger`, `ReportKind`:
   its contributor's own reaction or bookkeeping, read by nothing a host
   serves) is not this arm's, nor is a host service's provider. Cleared by
   making the barrel portable or moving the contribution into a portable
@@ -360,6 +360,7 @@ wrapper fixpoint reads.
     - `generatePluginDocs`
     - `generatePluginRegistry`
     - `generateReorderableSlots`
+    - `generateServerContributors`
     - `generateSpaceRamp`
     - `generateStaticHosts`
     - `generateTokenGroupVars`
@@ -409,6 +410,7 @@ wrapper fixpoint reads.
     - `renderPluginClaudeMd`
     - `renderPluginReferenceMd`
     - `renderReorderableSlotsManifest`
+    - `renderServerContributors`
     - `renderSpaceRamp`
     - `renderStaticHostFile`
     - `renderThemeDeclarationsManifest`
@@ -424,6 +426,7 @@ wrapper fixpoint reads.
     - `scopedOnlyWebPlugins`
     - `seedAuthoredOverrides`
     - `serverBarrelBlockers`
+    - `serverContributorsPath`
     - `setDefaultOriginAnnotations`
     - `setDefaultOriginAnnotationsPreparer`
     - `setDefaultOriginDefaults`

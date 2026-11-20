@@ -37,7 +37,9 @@ export interface PopoverAnchorLostFault {
  * registers the mapping to a filed report; with nothing registered `emit` only
  * holds a bounded backlog.
  */
-export const popoverAnchorLostSink = defineReportSink<PopoverAnchorLostFault>();
+export const popoverAnchorLostSink = defineReportSink<PopoverAnchorLostFault>(
+  "primitives/plugins/css/plugins/ui-kit:popoverAnchorLostSink",
+);
 
 /** What Floating UI positions against: a rect, and the element whose scroll
  *  ancestors, resizes and moves it keeps tracking (`autoUpdate` unwraps it). */

@@ -50,7 +50,9 @@ export interface IdleTransactionEndedEvent {
  * does, like `queryDeadlineSink`.
  */
 export const idleTransactionEndedSink =
-  defineReportSink<IdleTransactionEndedEvent>();
+  defineReportSink<IdleTransactionEndedEvent>(
+    "database/plugins/connection:idleTransactionEndedSink",
+  );
 
 /** The one spelling of the event's log line: `db.jsonl` in a backend, stderr in a CLI process. */
 export function formatIdleTransactionEndedLogLine(

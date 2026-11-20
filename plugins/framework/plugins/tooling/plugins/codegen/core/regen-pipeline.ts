@@ -4,6 +4,7 @@ import { generateBarrelStubs } from "./barrel-stubs-gen";
 import { generateBrowserHosts } from "./browser-host-gen";
 import { generateStaticHosts } from "./static-host-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
+import { generateServerContributors } from "./server-contributors-gen";
 import { stampOverrideLegends } from "./override-legend-stamp";
 import { generatePluginDocs } from "./docgen";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
@@ -273,6 +274,12 @@ export async function regenerateManifestCodegen({
     );
     await onStep("configOrigins", "generate config origins", () =>
       generateConfigOrigins({ pass }),
+    );
+    // The same evaluated server barrels (memoized): who contributes to which
+    // server list, for a process that starts only some plugins. No barrel
+    // imports it, so no barrel freezes a stale copy.
+    await onStep("serverContributors", "server contributors table", () =>
+      generateServerContributors({ pass }),
     );
     // After the origins: the stamp reads the same descriptor set. It writes
     // only comment lines into overrides that already exist (never a file, never

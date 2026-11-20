@@ -15,6 +15,12 @@ type Collected<P> = P & { _pluginId?: string; _pluginDescription?: string };
 export interface ServerContributionToken<P, I = P> {
   (input: I): ServerContribution;
   /**
+   * The kind's debug name — its identity in the build's contributor table
+   * (`contributors.generated.ts`), and what a process starting only some
+   * plugins names a list it reads by.
+   */
+  readonly debugName: string;
+  /**
    * Every contribution of this kind, as `collectContributions` gathered them at
    * boot. Throws in a process that never collected — a CLI or a headless test —
    * rather than answering `[]`, which a caller cannot tell apart from "no
@@ -29,6 +35,15 @@ export interface ServerContributionToken<P, I = P> {
    */
   getContributionsIfCollected(): Collected<P>[] | undefined;
   /**
+   * The contributions of the plugins THIS process started — in a process that
+   * started only some (`declarePartialStart`), only theirs, with no list-rule
+   * check. Never an answer about the whole list: only for a reader whose
+   * question is "what do my own started plugins declare?" (a job verifying
+   * that the database holds the objects its own code declares). Everywhere
+   * else, `getContributions()`.
+   */
+  startedContributions(): Collected<P>[];
+  /**
    * The contributions of this kind declared by `plugins` (loaded plugin
    * definitions), matched on this token's own kind. Pure: reads no boot state,
    * so a process that imports the barrels without booting gets the same set.
@@ -39,10 +54,12 @@ export interface ServerContributionToken<P, I = P> {
 }
 
 /**
- * A contribution kind a host may run without some of its contributors (see
- * `defineServerContribution`): why nothing the host serves reads it.
+ * A contribution kind a process may run without some of its contributors (see
+ * `defineServerContribution`): why each entry only matters to the plugin that
+ * contributed it, so a process that did not start that plugin is right not to
+ * have it.
  */
-export interface AbsentOnHost {
+export interface PartialList {
   reason: string;
 }
 
@@ -75,7 +92,7 @@ function stripKind<P>({ _kind: _, ...rest }: ServerContribution): P {
  * stores (and every read returns) `project(input)`: `Resource.Declare` takes a
  * whole `Resource` and keeps `{ key, mode, preload }`.
  *
- * `absentOnHost` declares that a host which does not boot a contributor of
+ * `partial` declares that a host which does not boot a contributor of
  * this kind still answers everything it serves correctly — the kind is its
  * contributor's own reaction or bookkeeping, never part of an answer (a
  * `Trigger` is the contributor reacting to an event: a host without it does
@@ -104,7 +121,7 @@ export function defineServerContribution<P>(
   debugName: string,
   opts: {
     docLabel?: (props: P) => string | undefined;
-    absentOnHost?: AbsentOnHost;
+    partial?: PartialList;
     companions: true;
   },
 ): ServerContributionToken<P, P & ServerCompanionFlag>;
@@ -112,7 +129,7 @@ export function defineServerContribution<P>(
   debugName: string,
   opts?: {
     docLabel?: (props: P) => string | undefined;
-    absentOnHost?: AbsentOnHost;
+    partial?: PartialList;
   },
 ): ServerContributionToken<P>;
 export function defineServerContribution<P, I>(
@@ -121,7 +138,7 @@ export function defineServerContribution<P, I>(
     docLabel?: (props: P) => string | undefined;
     /** The payload a contributor's input declares. */
     project: (input: I) => P;
-    absentOnHost?: AbsentOnHost;
+    partial?: PartialList;
     companions: true;
   },
 ): ServerContributionToken<P, I & ServerCompanionFlag>;
@@ -131,7 +148,7 @@ export function defineServerContribution<P, I>(
     docLabel?: (props: P) => string | undefined;
     /** The payload a contributor's input declares. */
     project: (input: I) => P;
-    absentOnHost?: AbsentOnHost;
+    partial?: PartialList;
   },
 ): ServerContributionToken<P, I>;
 export function defineServerContribution<P, I>(
@@ -139,11 +156,13 @@ export function defineServerContribution<P, I>(
   opts?: {
     docLabel?: (props: P) => string | undefined;
     project?: (input: I) => P;
-    absentOnHost?: AbsentOnHost;
+    partial?: PartialList;
     companions?: true;
   },
 ): ServerContributionToken<P, I> {
   const kind = Symbol(debugName);
+  const partial = opts?.partial !== undefined;
+  if (opts?.companions === true) companionKinds.add(debugName);
   const project = opts?.project ?? ((input: I) => input as unknown as P);
 
   const token = ((input: I) => {
@@ -160,11 +179,22 @@ export function defineServerContribution<P, I>(
       ...(companion ? { companion: true } : {}),
     };
   }) as unknown as ServerContributionToken<P, I>;
+  (token as { debugName: string }).debugName = debugName;
 
-  token.getContributionsIfCollected = () =>
-    byKind === null
-      ? undefined
-      : (byKind.get(kind) ?? []).map((c) => stripKind<Collected<P>>(c));
+  token.getContributionsIfCollected = () => {
+    if (byKind === null) return undefined;
+    if (!partial) assertWholeList(debugName);
+    return (byKind.get(kind) ?? []).map((c) => stripKind<Collected<P>>(c));
+  };
+
+  token.startedContributions = () => {
+    if (byKind === null) {
+      throw new Error(
+        `[contributions] "${debugName}" read before collectContributions ran: this process never booted the plugin graph.`,
+      );
+    }
+    return (byKind.get(kind) ?? []).map((c) => stripKind<Collected<P>>(c));
+  };
 
   token.getContributions = () => {
     if (byKind === null) {
@@ -209,6 +239,91 @@ function splitCompanion<I>(
       `[contributions] "${debugName}": \`companion\` must be the literal \`true\` (or absent), got ${String(companion)}.`,
     );
   return { input: rest as I, companion: true };
+}
+
+// ── A process that started only some plugins ─────────────────────────────────
+//
+// A job process starts the plugins its job needs, not the whole app
+// (`resolveStartSet`, `startPartial`). A COMPLETE list (a kind without
+// `partial`) read there is missing every entry of a contributor it did not
+// start — silently, unless the read checks. It checks against the BUILD's
+// table of contributors (`contributors.generated.ts`), never against a
+// declaration, so a forgotten declaration is a loud failure, never a silent
+// miss.
+
+/** What a process that started only some plugins knows about what it left out. */
+export interface PartialStart {
+  /** What it started from, in words: `job database.fork (plugin database/plugins/fork)`. */
+  readonly startedFrom: string;
+  /** How many graph nodes it started, and how many its registry holds. */
+  readonly started: number;
+  readonly total: number;
+  /**
+   * The contributors of `kind` (a debug name) in this process's registry that
+   * it did not start — empty when every one started.
+   */
+  missingContributors(kind: string): readonly string[];
+  /** How a reader of `kind` makes it read whole: the fix the error names. */
+  readonly fix: (kind: string) => string;
+}
+
+let partialStart: PartialStart | null = null;
+
+// Every kind opened to companions this process defined (module eval): its
+// owner is loaded, so it needs its companions at run time — what the closure
+// engine's owner → companion edge ships. A partial start starts their
+// contributors as if the work read the list whole.
+const companionKinds = new Set<string>();
+
+/** The debug names of the companion kinds this process's modules defined, sorted. */
+export function definedCompanionKinds(): string[] {
+  return [...companionKinds].sort();
+}
+
+/**
+ * Declare that this process started only some plugins, before it collects.
+ * Boot sequence only (`runExec`'s partial start); once per process.
+ */
+export function declarePartialStart(start: PartialStart): void {
+  if (partialStart !== null) {
+    throw new Error("[lists] this process's partial start was declared twice");
+  }
+  partialStart = start;
+}
+
+/** A complete list read in a process that did not start all its contributors. */
+export class PartialListReadError extends Error {
+  constructor(
+    readonly kind: string,
+    readonly missing: readonly string[],
+    start: PartialStart,
+  ) {
+    const shown = missing.slice(0, 8).join(", ");
+    super(
+      `[lists] "${kind}" is a complete list, read in a process that started ${start.started} of ${start.total} parts.\n` +
+        `Not started: ${missing.length} contributor${missing.length === 1 ? "" : "s"} (${shown}${missing.length > 8 ? ", …" : ""}).\n` +
+        `Started from: ${start.startedFrom}.\n` +
+        `Fix: ${start.fix(kind)}`,
+    );
+    this.name = "PartialListReadError";
+  }
+}
+
+function assertWholeList(kind: string): void {
+  if (partialStart === null) return;
+  const missing = partialStart.missingContributors(kind);
+  if (missing.length > 0)
+    throw new PartialListReadError(kind, missing, partialStart);
+}
+
+/** Whether this process started only some plugins (`declarePartialStart`). */
+export function isPartialStart(): boolean {
+  return partialStart !== null;
+}
+
+/** Forget a declared partial start. Test support (`core/testing`). */
+export function clearPartialStart(): void {
+  partialStart = null;
 }
 
 // How many times what was collected has been deliberately forgotten

@@ -39,7 +39,9 @@ export interface PanelOverflowFault {
  * registers the mapping to a filed report; with nothing registered `emit` only
  * holds a bounded backlog.
  */
-export const panelOverflowReportSink = defineReportSink<PanelOverflowFault>();
+export const panelOverflowReportSink = defineReportSink<PanelOverflowFault>(
+  "primitives/plugins/css/plugins/control-panel:panelOverflowReportSink",
+);
 
 /** Sub-pixel layout rounding is not an overflow. */
 const EPSILON = 0.5;

@@ -24,7 +24,9 @@ export interface LiveSetOverBudget {
  * `reports`, so `reports/live-set-budget` drains it into a
  * `live-set-over-budget` report.
  */
-export const liveSetOverBudgetSink = defineReportSink<LiveSetOverBudget>();
+export const liveSetOverBudgetSink = defineReportSink<LiveSetOverBudget>(
+  "network/plugins/live/plugins/query-resource:liveSetOverBudgetSink",
+);
 
 /**
  * Check one load of a whole set against its declared bound's budget: an

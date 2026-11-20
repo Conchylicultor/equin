@@ -23,6 +23,7 @@ import {
 } from "../../server/internal/runner";
 import {
   differingParts,
+  partialMismatches,
   recordSchemaLayerStamp,
   schemaLayerStamp,
 } from "../../server/internal/layer-stamp";
@@ -103,7 +104,37 @@ describe("schemaLayerStamp", () => {
       stampParts: [part("q", "1.1.0"), part("r", "x")],
     });
     expect(bumped).not.toBe(a);
-    expect(differingParts(a, bumped)).toEqual(["stampParts"]);
+    expect(differingParts(a, bumped)).toEqual(["stampParts (q)"]);
+  });
+
+  test("a partial check asks only for the items its own declarations hold", () => {
+    const part = (id: string, digest: string) => ({ id, digest });
+    const stored = schemaLayerStamp([base], {
+      ...inputs(v1),
+      stampParts: [part("q", "1.0.0"), part("r", "x")],
+    });
+    // A process that started only `q`'s plugin, and no view: its items match.
+    const own = schemaLayerStamp([base], {
+      ...inputs(),
+      stampParts: [part("q", "1.0.0")],
+    });
+    expect(partialMismatches(stored, own)).toEqual([]);
+    expect(differingParts(stored, own)).toEqual([
+      "stampParts (r)",
+      "views (st_widgets_v)",
+    ]);
+    // One of its own items changed, or the migrations moved: not ready.
+    const bumped = schemaLayerStamp([base], {
+      ...inputs(),
+      stampParts: [part("q", "1.1.0")],
+    });
+    expect(partialMismatches(stored, bumped)).toEqual(["stampParts (q)"]);
+    expect(
+      partialMismatches(stored, schemaLayerStamp([base, next], inputs())),
+    ).toEqual(["migrations"]);
+    expect(partialMismatches('{"views":"0123"}', own)).toEqual([
+      "(a stamp in another format)",
+    ]);
   });
 
   test("ignores the framework's own marks on a contribution, and declaration order", () => {
@@ -157,23 +188,31 @@ describe("verifySchemaLayer", () => {
   });
 
   test("a database no owner ever set up is not ready", async () => {
-    const check = await verifySchemaLayer(t.db, [base], inputs(v1));
+    const check = await verifySchemaLayer(t.db, [base], inputs(v1), {
+      partial: false,
+    });
     expect(check.kind).toBe("not-ready");
   });
 
   test("ready for the code whose layer the owner committed, not for other code", async () => {
     await ownerBoot(t, [base], inputs(v1));
-    expect((await verifySchemaLayer(t.db, [base], inputs(v1))).kind).toBe(
-      "ready",
-    );
+    expect(
+      (await verifySchemaLayer(t.db, [base], inputs(v1), { partial: false }))
+        .kind,
+    ).toBe("ready");
     // A push's migration the owner has not applied yet.
-    expect((await verifySchemaLayer(t.db, [base, next], inputs(v1))).kind).toBe(
-      "not-ready",
-    );
+    expect(
+      (
+        await verifySchemaLayer(t.db, [base, next], inputs(v1), {
+          partial: false,
+        })
+      ).kind,
+    ).toBe("not-ready");
     // A view edit the owner has not installed yet.
-    expect((await verifySchemaLayer(t.db, [base], inputs(v2))).kind).toBe(
-      "not-ready",
-    );
+    expect(
+      (await verifySchemaLayer(t.db, [base], inputs(v2), { partial: false }))
+        .kind,
+    ).toBe("not-ready");
   });
 
   test("a stamp whose migrations the ledger lacks admits nobody (a revert, a copied stamp)", async () => {
@@ -186,7 +225,9 @@ describe("verifySchemaLayer", () => {
       testSchemaOwner(),
       schemaLayerStamp([base, next], inputs(v1)),
     );
-    const check = await verifySchemaLayer(t.db, [base, next], inputs(v1));
+    const check = await verifySchemaLayer(t.db, [base, next], inputs(v1), {
+      partial: false,
+    });
     expect(check.kind).toBe("not-ready");
     if (check.kind === "not-ready")
       expect(check.detail).toContain("not applied");
@@ -198,9 +239,10 @@ describe("verifySchemaLayer", () => {
       owner: testSchemaOwner(),
       deferContract: false,
     });
-    expect((await verifySchemaLayer(t.db, [base], inputs(v1))).kind).toBe(
-      "not-ready",
-    );
+    expect(
+      (await verifySchemaLayer(t.db, [base], inputs(v1), { partial: false }))
+        .kind,
+    ).toBe("not-ready");
   });
 
   test("a rolled-back dry run leaves the owner's stamp", async () => {
@@ -209,8 +251,9 @@ describe("verifySchemaLayer", () => {
       commit: false,
       deferContract: false,
     });
-    expect((await verifySchemaLayer(t.db, [base], inputs(v1))).kind).toBe(
-      "ready",
-    );
+    expect(
+      (await verifySchemaLayer(t.db, [base], inputs(v1), { partial: false }))
+        .kind,
+    ).toBe("ready");
   });
 });

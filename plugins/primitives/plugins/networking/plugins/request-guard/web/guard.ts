@@ -65,7 +65,9 @@ export class RawApiRequestError extends Error {
  * `Core.Root` effect has run — is replayed rather than lost.
  */
 export const requestGuardReportSink: ReportSink<RawApiRequestError> =
-  defineReportSink<RawApiRequestError>();
+  defineReportSink<RawApiRequestError>(
+    "primitives/plugins/networking/plugins/request-guard:requestGuardReportSink",
+  );
 
 /** Path prefixes a GET / HEAD may load as an asset (see `allowAssetRoute`). */
 const assetRoutes = new Set<string>();

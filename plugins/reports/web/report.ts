@@ -80,7 +80,7 @@ async function sendToEngine(body: ReportBody): Promise<ClientReportOutcome> {
 export const reportChannel = defineRequestSink<
   ReportBody,
   Promise<ClientReportOutcome>
->();
+>("reports:reportChannel");
 
 // The caller-supplied portion of a report: the browser picks the kind, the
 // source (client-reportable only — enforced by ReportBodySchema's enum), the

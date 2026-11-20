@@ -64,4 +64,6 @@ export interface SlowResourceInfo {
  * next door — rather than `defineInstallSink`, and it inherits that primitive's
  * never-throw contract on the emit path.
  */
-export const slowResourceReportSink = defineReportSink<SlowResourceInfo>();
+export const slowResourceReportSink = defineReportSink<SlowResourceInfo>(
+  "network/plugins/live/plugins/live-state:slowResourceReportSink",
+);

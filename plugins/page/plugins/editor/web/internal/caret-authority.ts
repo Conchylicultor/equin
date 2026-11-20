@@ -219,7 +219,9 @@ export interface CaretFlightAbortReport {
  * editor must not import `reports`, so a domain plugin registers the mapping
  * (the sink is inert — a no-op — until one does). `emit` never throws.
  */
-export const caretFlightReportSink = defineReportSink<CaretFlightAbortReport>();
+export const caretFlightReportSink = defineReportSink<CaretFlightAbortReport>(
+  "page/plugins/editor:caretFlightReportSink",
+);
 
 /**
  * The keys the authority buffers AS KEYS rather than as text: exactly the set

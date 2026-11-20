@@ -1156,7 +1156,7 @@ export interface HostContributionCoverageInputs {
   /** Every declared contribution kind: kind → its declarations, by plugin path. */
   kinds: ReadonlyMap<
     string,
-    readonly (Pick<ServerContributionKindDecl, "kind" | "absentOnHost"> & {
+    readonly (Pick<ServerContributionKindDecl, "kind" | "partial"> & {
       plugin: string;
     })[]
   >;
@@ -1169,7 +1169,7 @@ export interface HostContributionCoverageInputs {
  * a kind a graph member declares — the member would answer the scoped page
  * without it (the task list's category labels, a list's exposed column, a
  * launch option the launch endpoint resolves). Unless the kind declares
- * `absentOnHost` (`defineServerContribution`): its contributions are the
+ * `partial` (`defineServerContribution`): its contributions are the
  * contributor's own reaction or bookkeeping, read by nothing the host serves.
  *
  * A kind no member declares is not this arm's (no member reads it); a host
@@ -1178,7 +1178,7 @@ export interface HostContributionCoverageInputs {
  * check), never in the barrel-free registry phase. Nothing exempts it: a gap
  * is cleared by making the contributing barrel portable, moving the
  * contribution into a portable `server/` half, or — for a kind whose
- * contributions never shape an answer — declaring the kind `absentOnHost`.
+ * contributions never shape an answer — declaring the kind `partial`.
  * Returns one line per contributing plugin.
  */
 export async function resolveHostContributionCoverage(
@@ -1197,7 +1197,7 @@ export async function resolveHostContributionCoverage(
       const decls = inputs.kinds.get(c.kind) ?? [];
       const declarers = decls.filter((d) => members.has(d.plugin));
       if (declarers.length === 0) continue;
-      if (declarers.every((d) => d.absentOnHost)) continue;
+      if (declarers.every((d) => d.partial)) continue;
       const label =
         c.label !== undefined && c.label.length > 60
           ? `${c.label.slice(0, 57)}…`

@@ -75,6 +75,7 @@ drained sink).
     - `ReportSink`
     - `RequestSink`
   - Exports (values):
+    - `declaredHandledSinkIds`
     - `defineObservationSink`
     - `defineReportSink`
     - `defineRequestSink`

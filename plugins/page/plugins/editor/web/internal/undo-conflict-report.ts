@@ -49,4 +49,6 @@ export interface UndoConflictReport {
  * inversion `caretFlightReportSink` and `collabHydrationReportSink` use. Inert
  * (a no-op) until one does.
  */
-export const undoConflictReportSink = defineReportSink<UndoConflictReport>();
+export const undoConflictReportSink = defineReportSink<UndoConflictReport>(
+  "page/plugins/editor:undoConflictReportSink",
+);

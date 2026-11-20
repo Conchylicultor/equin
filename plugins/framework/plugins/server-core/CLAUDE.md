@@ -64,8 +64,8 @@ there, not in a composition root, unless it is genuinely serve-only.
 | phase                                          | `serve` | `exec` | `browser` |
 | ---------------------------------------------- | ------- | ------ | --------- |
 | load waves, `collectContributions`, host-service assert, `register` | yes | yes | yes |
-| `bindDeferredResources`                        | yes     | yes    | yes       |
-| preload-declare assert                         | yes     | yes    | yes       |
+| `bindDeferredResources`                        | yes     | yes (not a partial start) | yes |
+| preload-declare assert                         | yes     | yes (not a partial start) | yes |
 | socket bind (first, 503 until routes) + route install | yes | no | no |
 | `sinkHandlers` attached (in the `onReadyBlocking` graph) | yes | yes | yes      |
 | `onReadyBlocking`                              | yes     | yes    | yes       |
@@ -106,6 +106,50 @@ with `onDeferredResourcesBound` (a cross-check over what the binds consumed,
 e.g. "every contribution names a collection served here"); a throw from a bind
 or a check fails boot, so such a
 graph never serves.
+
+### A job starts only what it needs: the partial start
+
+An `exec` child of a supervised job that declares `reads` (`defineSupervisedJob`)
+starts only its declaring plugin and what it needs, not the whole app:
+`runExec(ns, body, { start: { root, reads, label, fix } })` →
+`bootPluginGraph({ start })` → `loadStartSet`, over `resolveStartSet`
+(`core/start-set.ts`, pure, each member with the reason it is there):
+
+1. the root plugin (the one whose `register` registered the job — read from
+   `registeringPlugin()` and handed to the child as `--start`), and every
+   plugin its `dependsOn` reaches;
+2. each plugin whole — the machine half of every server half;
+3. every contributor of a list the job reads (`reads`, `--reads`);
+4. to a fixpoint, by loading: the provider of every host service its modules
+   declare, the handler of every report sink they declare
+   (`defineReportSink(id)` / `sinkHandler` — a report emitted with no handler
+   is held and lost at exit; a request sink only when declared
+   `alwaysHandled` — the crash and fatal sinks — since any other's emitter is
+   answered `undefined`),
+   and the contributors of every kind opened to companions they define.
+
+Who contributes what, and who handles which sink, comes from the build's
+table, `core/contributors.generated.ts` (codegen's `server-contributors-gen.ts`
+over the evaluated barrels; `server-contributors-in-sync` fails on drift). It
+is loaded only by a partial start.
+
+**The list rule.** A partial start declares itself (`declarePartialStart`), and
+from then on reading a COMPLETE list — a kind without `partial: { reason }` —
+whose contributors in this registry did not all start throws
+`PartialListReadError`, naming the list, the plugins not started, the job and
+the fix (add the list to the job's `reads`, or classify the kind `partial`
+when each entry only matters to its contributor). Not classified means
+complete: a forgotten declaration is a loud failure, never a silent miss.
+`Kind.startedContributions()` is the one sanctioned partial read ("what do my
+started plugins declare?" — the schema verifier). A partial start skips the
+deferred-resource bind and the preload-declare assert (a job serves no
+resource; the serving boot and the build check the whole graph), and the
+non-owner work of change-feed's and live-state-snapshot's blocking hooks.
+
+The schema check of a partial start is item by item (`migrations`'
+`verifySchemaLayer` with `partial`): every view, rollup, trigger set and stamp
+part its started plugins declare must be installed as they declare it; items
+only other plugins declare are not its to check.
 
 ### Every mode declares its namespace FIRST
 
@@ -402,7 +446,7 @@ server contribution kind; plugins list `Kind(payload)` in `contributions`, and
 readers call `Kind.getContributions()` after `collectContributions`. Two
 static options shape what the build does with a kind:
 
-- `absentOnHost: { reason }` — a host may run without some contributors (the
+- `partial: { reason }` — a host may run without some contributors (the
   browser-host coverage guard's contributions arm).
 - `companions: true` — opens the kind to **companions**: a contribution passing
   `companion: true` ships wherever the kind's declaring plugin ships (the
@@ -556,6 +600,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `network/live/resource-runtime.ResourceGuardError`
     - `packages/error-subject.crashFieldsOf`
     - `packages/string-hash.hash64`
+    - `primitives/report-sink.declaredHandledSinkIds`
     - `primitives/report-sink.defineReportSink`
     - `primitives/report-sink.defineRequestSink`
   - Exports (types):
@@ -569,6 +614,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ChangeSource`
     - `ComposedEntry`
     - `ComposedHome`
+    - `ContributorTable`
     - `DependsOnEntry`
     - `EndpointHttpHandler`
     - `EpochHandoffHooks`
@@ -589,6 +635,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `MachinePluginDefinition`
     - `MemoryCheckpoint`
     - `MemoryProbe`
+    - `PartialList`
     - `PeerUsage`
     - `PeerUsageProbe`
     - `PersistedBase`
@@ -631,6 +678,8 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ServerResourceOptions`
     - `SinkHandler`
     - `Span`
+    - `StartSet`
+    - `StartSetInput`
     - `TableChange`
     - `TableLayoutRequirement`
     - `WsData`
@@ -654,6 +703,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `exitWithFatalReport`
     - `getBootMode`
     - `getProfilingData`
+    - `graphNodeOf`
     - `handleResourceHttp`
     - `handOffEpoch`
     - `heapMemory`
@@ -665,6 +715,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `installMemoryProbe`
     - `installPeerUsageProbe`
     - `installSnapHash`
+    - `isPartialStart`
     - `isProcessCrashHandled`
     - `isServerReady`
     - `keptSnapshotValue`
@@ -681,6 +732,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `onResourceDelivery`
     - `onResourcePush`
     - `ownCpuMs`
+    - `PartialListReadError`
     - `peerProcUsage`
     - `PENDING_JOURNALED`
     - `persistedDefinitions`
@@ -698,6 +750,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `relationResourceReads`
     - `reportServer`
     - `reportServerError`
+    - `resolveStartSet`
     - `Resource`
     - `routedTableRequirements`
     - `routedTablesOf`

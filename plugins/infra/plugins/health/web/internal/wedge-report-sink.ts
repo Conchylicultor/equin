@@ -9,4 +9,6 @@ export interface WedgeReport {
   message: string;
 }
 
-export const wedgeReportSink = defineReportSink<WedgeReport>();
+export const wedgeReportSink = defineReportSink<WedgeReport>(
+  "infra/plugins/health:wedgeReportSink",
+);

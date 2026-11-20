@@ -2,8 +2,11 @@ export { machineCollectedDir, serverCollectedDir } from "./collected-dir";
 export {
   collectContributions,
   defineServerContribution,
+  isPartialStart,
+  PartialListReadError,
 } from "./contributions";
 export type {
+  PartialList,
   ServerContribution,
   ServerContributionToken,
 } from "./contributions";
@@ -185,3 +188,5 @@ export type {
   WsData,
   WsHandler,
 } from "./types";
+export { graphNodeOf, resolveStartSet } from "./start-set";
+export type { ContributorTable, StartSet, StartSetInput } from "./start-set";

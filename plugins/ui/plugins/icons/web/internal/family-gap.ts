@@ -16,7 +16,9 @@ export interface IconFamilyGap {
  * the ui-kit and must not import `reports`, so a reports sub-plugin registers
  * the mapping to a report (the same inversion the theme painter uses).
  */
-export const iconFamilyGapReportSink = defineReportSink<IconFamilyGap>();
+export const iconFamilyGapReportSink = defineReportSink<IconFamilyGap>(
+  "ui/plugins/icons:iconFamilyGapReportSink",
+);
 
 /** (family, name) pairs already reported on this page. */
 const reported = new Set<string>();

@@ -59,15 +59,16 @@ export async function awaitSchemaLayer(
   inputs: SchemaLayerInputs,
   step: BootStep,
   yieldAdmission: <T>(wait: () => Promise<T>) => Promise<T>,
+  opts: { readonly partial: boolean },
 ): Promise<void> {
   const first = await step("verify", () =>
-    verifySchemaLayer(db, migrations, inputs),
+    verifySchemaLayer(db, migrations, inputs, opts),
   );
   if (first.kind === "ready") return;
   await step("wait", () =>
     yieldAdmission(() =>
       waitForOwner(first, {
-        verify: () => verifySchemaLayer(db, migrations, inputs),
+        verify: () => verifySchemaLayer(db, migrations, inputs, opts),
         driver: DatabaseDriver.get(),
         waitMs: SCHEMA_WAIT_MS,
       }),

@@ -918,6 +918,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`pre-barrel-manifests-complete`**
   - **`registry`** — The check registry: the check collected-dir marker, its generated check.generated.ts, and loadChecks / listAllChecks — every registered check with the module its code lives in. Apart from…
   - **`reorderable-slots-in-sync`**
+  - **`server-contributors-in-sync`**
   - **`snapshot-chain-intact`**
   - **`source-analysis`**
   - **`space-ramp-in-sync`**

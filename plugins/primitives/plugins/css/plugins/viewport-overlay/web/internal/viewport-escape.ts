@@ -234,7 +234,9 @@ export interface ViewportEscapeFault {
  * usable in a test harness — and is exactly why the app composition MUST carry
  * a collector.
  */
-export const viewportEscapeReportSink = defineReportSink<ViewportEscapeFault>();
+export const viewportEscapeReportSink = defineReportSink<ViewportEscapeFault>(
+  "primitives/plugins/css/plugins/viewport-overlay:viewportEscapeReportSink",
+);
 
 export interface ViewportEscapeOptions {
   /**

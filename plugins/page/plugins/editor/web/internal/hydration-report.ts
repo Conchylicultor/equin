@@ -36,4 +36,7 @@ export interface CollabHydrationReport {
  * module-level sink and a domain plugin registers the mapping — the same
  * inversion `caretFlightReportSink` uses. Inert (a no-op) until one does.
  */
-export const collabHydrationReportSink = defineReportSink<CollabHydrationReport>();
+export const collabHydrationReportSink =
+  defineReportSink<CollabHydrationReport>(
+    "page/plugins/editor:collabHydrationReportSink",
+  );

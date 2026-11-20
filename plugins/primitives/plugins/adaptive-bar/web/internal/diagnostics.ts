@@ -110,7 +110,9 @@ export interface AdaptiveBarFault {
  * carry a collector. It did not, so every fault below was silently dropped in
  * prod until the Layout Lab pane started dying of one.
  */
-export const adaptiveBarReportSink = defineReportSink<AdaptiveBarFault>();
+export const adaptiveBarReportSink = defineReportSink<AdaptiveBarFault>(
+  "primitives/plugins/adaptive-bar:adaptiveBarReportSink",
+);
 
 /**
  * Report and keep going. For a fault the bar has already handled correctly:

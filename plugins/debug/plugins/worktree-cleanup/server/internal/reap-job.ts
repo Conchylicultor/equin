@@ -7,6 +7,7 @@ import {
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
+import { WorkspaceReclaimed } from "@plugins/conversations/plugins/workspace/server";
 import {
   dropRetiredBranchReflogs,
   describeHarvest,
@@ -77,6 +78,10 @@ export const worktreeReapJob = defineSupervisedJob({
   channel: reapLog,
   schedule: { cron: "0 * * * *" }, // hourly — REAP_PERIOD_MS below
   runAttempts: 1,
+  // Its child starts this plugin and what it imports, plus every plugin that
+  // keeps per-attempt state: a reap tells each of them (`Workspace.Reclaimed`,
+  // read by `announceWorkspacesReclaimed`), so that list must be whole.
+  reads: [WorkspaceReclaimed],
   // The sweep reaps in its child, so the panel's held scans (this backend's
   // memory) are told here, at its end: their rows the sweep moved re-read.
   // Idempotent — it only looks at what is on disk and in the catalog now.

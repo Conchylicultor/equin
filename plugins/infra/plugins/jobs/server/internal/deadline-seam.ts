@@ -83,4 +83,6 @@ export interface JobDeadlineEvent {
  * (`false`) from "a consumer owns it". The first two both fall back to
  * `reportServerError`, so the abort can never be silent.
  */
-export const jobDeadlineSink = defineRequestSink<JobDeadlineEvent, boolean>();
+export const jobDeadlineSink = defineRequestSink<JobDeadlineEvent, boolean>(
+  "infra/plugins/jobs:jobDeadlineSink",
+);

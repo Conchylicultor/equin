@@ -25,4 +25,4 @@ export interface BoundaryErrorReport {
 export const boundaryReportSink = defineRequestSink<
   BoundaryErrorReport,
   Promise<unknown> | unknown | void
->();
+>("primitives/plugins/error-boundary:boundaryReportSink");

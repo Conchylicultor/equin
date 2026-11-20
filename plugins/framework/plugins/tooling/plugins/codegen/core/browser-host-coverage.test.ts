@@ -9,7 +9,7 @@
  * scope's, and it may hold no scope fetcher. The config arm pairs a scoped web
  * registration with a member's `server/` registration; the contributions arm
  * refuses a scoped plugin's out-of-graph contribution to a kind a member
- * declares, unless the kind is `absentOnHost`.
+ * declares, unless the kind is `partial`.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -441,14 +441,14 @@ describe("resolveHostContributionCoverage", () => {
       kinds: new Map([
         [
           "registry.entry",
-          [{ kind: "registry.entry", absentOnHost: false, plugin: "registry" }],
+          [{ kind: "registry.entry", partial: false, plugin: "registry" }],
         ],
         [
           "registry.reaction",
           [
             {
               kind: "registry.reaction",
-              absentOnHost: true,
+              partial: true,
               plugin: "registry",
             },
           ],
@@ -458,7 +458,7 @@ describe("resolveHostContributionCoverage", () => {
           [
             {
               kind: "elsewhere.entry",
-              absentOnHost: false,
+              partial: false,
               plugin: "elsewhere",
             },
           ],
@@ -485,7 +485,7 @@ describe("resolveHostContributionCoverage", () => {
     expect(problems[0]).toContain("it is not portable: it reads the disk");
   });
 
-  test("an absentOnHost kind, a kind no member declares and a host service are not its", async () => {
+  test("a partial kind, a kind no member declares and a host service are not its", async () => {
     expect(
       await contributions([
         {

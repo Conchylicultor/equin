@@ -23,7 +23,9 @@ export interface ServerErrorReport {
   scope?: string | null;
 }
 
-export const serverErrorSink = defineReportSink<ServerErrorReport>();
+export const serverErrorSink = defineReportSink<ServerErrorReport>(
+  "framework/plugins/server-core:serverErrorSink",
+);
 
 export function reportServerError(report: ServerErrorReport): void {
   serverErrorSink.emit(report);
@@ -64,7 +66,9 @@ export interface ServerReport {
  * to it. The reports engine handles it (a `sinkHandlers` entry) with
  * `recordReport` — async, so the backend's JS thread never waits on a disk.
  */
-export const serverReportSink = defineReportSink<ServerReport>();
+export const serverReportSink = defineReportSink<ServerReport>(
+  "framework/plugins/server-core:serverReportSink",
+);
 
 /** File a typed report from a process that keeps running (async, held). */
 export function reportServer(report: ServerReport): void {
@@ -84,7 +88,10 @@ export function reportServer(report: ServerReport): void {
  * Emitted only by {@link exitWithFatalReport}: a synchronous disk write on a
  * backend that lives on freezes its JS thread for as long as the disk answers.
  */
-export const serverFatalSink = defineRequestSink<ServerReport, boolean>();
+export const serverFatalSink = defineRequestSink<ServerReport, boolean>(
+  "framework/plugins/server-core:serverFatalSink",
+  { alwaysHandled: true },
+);
 
 /**
  * File a report synchronously, then exit the process with code 1 — the last

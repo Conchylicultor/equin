@@ -1,5 +1,6 @@
 import {
   getBootMode,
+  isPartialStart,
   setWatermarkSource,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
@@ -21,6 +22,7 @@ import { awaitSchemaLayer } from "./internal/await-schema-layer";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   derivedInputs,
+  startedDerivedInputs,
   runDeferredContract,
   setDeferredContract,
   settleDeferredContract,
@@ -116,9 +118,13 @@ export default {
       await step("schema-verify", (inner) =>
         awaitSchemaLayer(
           migrations,
-          derivedInputs(),
+          // What this process's started plugins declare: a job that started
+          // only some checks the objects its own code declares
+          // (`verifySchemaLayer`'s `partial`), a whole process all of them.
+          startedDerivedInputs(),
           inner,
           schema.yieldAdmission,
+          { partial: isPartialStart() },
         ),
       );
       // This process reconciled, applied and deferred nothing.

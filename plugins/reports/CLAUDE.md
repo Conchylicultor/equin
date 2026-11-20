@@ -12,7 +12,7 @@ backfill, investigation — is the engine,
 So a kind's own server code imports `ReportKind` / `ReportRow` from here and
 `recordReport` from `@plugins/reports/plugins/engine/server`.
 
-`ReportKind` is declared `absentOnHost`: it is how the engine records,
+`ReportKind` is declared `partial`: it is how the engine records,
 renders and files a kind, read by nothing `reports.list` answers, so a host
 without a kind's contributor (the demo's worker) is not missing anything it
 serves. Investigating a report (`investigateReport`,

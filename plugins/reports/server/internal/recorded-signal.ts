@@ -19,7 +19,7 @@ export const ReportRecorded = defineServerContribution<ReportRecordedListener>(
   "report-recorded",
   {
     docLabel: (l) => l.id,
-    absentOnHost: {
+    partial: {
       reason:
         "called where reports are written (`reports/engine`, desktop-only): a host without the engine records no report, so nothing would call its listeners",
     },

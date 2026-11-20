@@ -126,8 +126,9 @@ export interface ForkExclusions {
 
 // The declared exclusion set, read two ways off one derivation:
 //
-//   - `forkExclusions()` — in a BOOTED backend (the fork job), from the
-//     contributions collected at boot;
+//   - `forkExclusions(tables, schemas)` — in a BOOTED process (the fork job),
+//     from the two lists it read (`ctx.read`, its declared `reads`, so its
+//     child started every contributor of both);
 //   - `forkExclusionsFrom(plugins)` — anywhere else (`./equin db fork`), from
 //     loaded plugin definitions (`loadDeclaredGraph`, server-core/cli), so it
 //     needs no running backend.
@@ -137,12 +138,11 @@ export interface ForkExclusions {
 // this repo guarantee a non-empty set in any complete graph, so an empty one
 // means the wrong (or no) graph was read. (`getContributions()` itself already
 // throws in a process that never collected.)
-export function forkExclusions(): ForkExclusions {
-  return toForkExclusions(
-    ExcludeFromFork.getContributions(),
-    ExcludeSchemaDataFromFork.getContributions(),
-    "forkExclusions()",
-  );
+export function forkExclusions(
+  tables: readonly { table: PgTable | string }[],
+  schemas: readonly { schema: string; keep: readonly string[] }[],
+): ForkExclusions {
+  return toForkExclusions(tables, schemas, "forkExclusions()");
 }
 
 export function forkExclusionsFrom(

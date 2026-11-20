@@ -20,7 +20,9 @@ export interface ToolInputDrift {
  * Where tool renderers emit {@link ToolInputDrift}, once per call per page.
  * The collector (`reports/tool-input-drift`) drains it.
  */
-export const toolInputDriftSink = defineReportSink<ToolInputDrift>();
+export const toolInputDriftSink = defineReportSink<ToolInputDrift>(
+  "conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call:toolInputDriftSink",
+);
 
 const emitted = new Set<string>();
 

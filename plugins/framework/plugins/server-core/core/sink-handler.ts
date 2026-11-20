@@ -18,11 +18,20 @@
 
 /** The one-handler slot of a report or request sink, read structurally. */
 interface HandlerSlot<H> {
+  /** The sink's identity (`defineReportSink(id)`): what names this handler's plugin in the build's table. */
+  readonly id: string;
   register(fn: H | null): void;
 }
 
 /** A handler on a sink, attached and detached by the framework. */
 export interface SinkHandler {
+  /**
+   * The id of the sink it handles. The build records which plugin handles
+   * which sink (`contributors.generated.ts`, as `sink:<id>`), so a process
+   * that started only some plugins starts the handler of every sink its
+   * modules declare.
+   */
+  readonly sinkId: string;
   /** Called by the framework in the `onReadyBlocking` phase. Never from plugin code. */
   attach(): void;
   /** Called by the framework after every `onShutdown`. Never from plugin code. */
@@ -39,6 +48,7 @@ export function sinkHandler<H>(
   make: () => H,
 ): SinkHandler {
   const handler: SinkHandler = {
+    sinkId: sink.id,
     attach() {
       // One slot per sink: a second plugin attaching would silently evict the
       // first plugin's handler, and its reports would stop. (The same handler

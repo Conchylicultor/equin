@@ -49,6 +49,9 @@ export const spareRefillJob = defineSupervisedJob({
   // Daily: replaces a spare older than a day, so the one a claim takes is never
   // weeks behind `main`.
   schedule: { cron: "40 4 * * *" },
+  // Its child starts this plugin and what it imports, not the whole app: the
+  // refill reads no contributed list.
+  reads: [],
   // No signal: the child is bounded by git's own timeouts and install's, and
   // nothing else holds it.
   async run(_input, { log }) {

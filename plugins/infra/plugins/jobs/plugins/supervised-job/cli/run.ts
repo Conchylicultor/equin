@@ -28,12 +28,17 @@ import {
  */
 const run: CliAction<
   [string, string],
-  { namespace: string; admit?: string }
+  { namespace: string; admit?: string; start?: string; reads?: string }
 > = async (taskId, payloadJson, opts) => {
   // Validated here, at the process boundary where a string off a command line
   // becomes an identity: the namespace goes on to name a database and a
   // directory, so a malformed one must be loud rather than become a path.
   const namespace = asNamespace(opts.namespace);
+  if (opts.reads !== undefined && opts.start === undefined) {
+    throw new Error(
+      "[supervised-exec] --reads names the lists a partial start reads, and only means something with --start <pluginPath>.",
+    );
+  }
   const pool =
     opts.admit === undefined ? undefined : parseAdmissionPool(opts.admit);
   const boot = (admission?: ExecAdmission) =>
@@ -44,6 +49,23 @@ const run: CliAction<
       exitCodeFor: supervisedChildExitCode,
       // Given back while the boot only waits for its schema (`runExec`).
       ...(admission === undefined ? {} : { admission }),
+      // The job declared what it reads: start its plugin and what it needs,
+      // not the whole app. A complete list it did not declare throws when
+      // read, naming the job and this fix.
+      ...(opts.start === undefined
+        ? {}
+        : {
+            start: {
+              root: opts.start,
+              reads:
+                opts.reads === undefined || opts.reads === ""
+                  ? []
+                  : opts.reads.split(","),
+              label: `job ${taskId} (plugin ${opts.start})`,
+              fix: (kind: string) =>
+                `add the "${kind}" list to the \`reads\` of job ${taskId} (\`defineSupervisedJob\`), or — if each entry only matters to the plugin that contributed it — declare the list \`partial: { reason }\` (\`defineServerContribution\`).`,
+            },
+          }),
     });
   // The job's admission pool, taken before anything boots (`--admit`). Its
   // lines go to stdout, which IS the run's transcript.

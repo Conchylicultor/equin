@@ -258,6 +258,7 @@ describe("sinkHandlers — attached in the ready barrier", () => {
   test("attaches after the parents' onReadyBlocking and before its own; detaches after every onShutdown", async () => {
     const log: string[] = [];
     const sink = {
+      id: "test:sink",
       register(fn: ((body: string) => void) | null) {
         log.push(fn ? "attach" : "detach");
       },
@@ -333,7 +334,10 @@ describe("runShutdownHooks — dependents before their dependencies", () => {
 
 describe("sinkHandler — one handler per sink", () => {
   test("a second handler on an attached sink throws; the same one re-attaches", () => {
-    const sink = { register(_fn: ((body: string) => void) | null) {} };
+    const sink = {
+      id: "test:sink",
+      register(_fn: ((body: string) => void) | null) {},
+    };
     const first = sinkHandler(sink, () => (_body: string) => {});
     const second = sinkHandler(sink, () => (_body: string) => {});
     first.attach();

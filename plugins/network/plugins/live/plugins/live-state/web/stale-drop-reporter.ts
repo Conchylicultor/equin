@@ -26,4 +26,6 @@ export interface HttpStaleDropReport {
   neverApplied: boolean;
 }
 
-export const httpStaleDropReportSink = defineReportSink<HttpStaleDropReport>();
+export const httpStaleDropReportSink = defineReportSink<HttpStaleDropReport>(
+  "network/plugins/live/plugins/live-state:httpStaleDropReportSink",
+);

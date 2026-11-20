@@ -4,6 +4,7 @@ import {
   relationResourceReads,
   unroutedResourceKeys,
   routedTableRequirements,
+  isPartialStart,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
 import {
@@ -110,6 +111,16 @@ export default {
   // barrier so the feed's triggers exist before any traffic — and the listener
   // (started in onReady, after the barrier) is guaranteed to find them.
   async onReadyBlocking({ schema }) {
+    // A job that started only the plugins it needs (server-core's partial
+    // start) serves nothing, opens no LISTEN and routes no change: the
+    // trigger plan and the relation graph below index what a serving host
+    // routes, and are built from lists only the whole app holds. It keeps
+    // the known-relations snapshot (a loader's read-set capture reads it);
+    // the relation bases stay unset, so anything reading them throws.
+    if (schema.kind !== "owner" && isPartialStart()) {
+      await loadKnownRelations(db);
+      return;
+    }
     // The contributed exclusions and producers, read once here: contributions
     // were collected before this barrier. The routed tables' trigger layouts
     // and the resource tables are derived from every registered route —

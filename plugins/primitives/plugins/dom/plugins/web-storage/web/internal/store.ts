@@ -281,7 +281,9 @@ const changeListeners = new Set<() => void>();
  * Every failure, for the reports collector: held until it registers, so a
  * write refused during boot (before any Core.Root mounted) still files.
  */
-export const storageFailureReportSink = defineReportSink<StorageFailure>();
+export const storageFailureReportSink = defineReportSink<StorageFailure>(
+  "primitives/plugins/dom/plugins/web-storage:storageFailureReportSink",
+);
 const failureListeners = new Set<(f: StorageFailure) => void>();
 
 /** The area's Storage, or `null` when the browser blocks it (a SecurityError on access). */

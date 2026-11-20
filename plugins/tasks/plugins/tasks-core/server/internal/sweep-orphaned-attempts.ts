@@ -21,7 +21,9 @@ export interface OrphanedAttempt {
   taskId: string;
 }
 
-export const orphanedAttemptSink = defineReportSink<OrphanedAttempt>();
+export const orphanedAttemptSink = defineReportSink<OrphanedAttempt>(
+  "tasks/plugins/tasks-core:orphanedAttemptSink",
+);
 
 export async function sweepOrphanedAttempts(): Promise<void> {
   const orphaned = await db

@@ -202,4 +202,6 @@ export function unansweredVerdict(
   return "dead-link";
 }
 
-export const unansweredSubReportSink = defineReportSink<UnansweredSubReport>();
+export const unansweredSubReportSink = defineReportSink<UnansweredSubReport>(
+  "network/plugins/live/plugins/live-state:unansweredSubReportSink",
+);

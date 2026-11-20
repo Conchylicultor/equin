@@ -17,4 +17,4 @@ export interface InvestigationTaskRequest {
 export const reportInvestigationSink = defineRequestSink<
   InvestigationTaskRequest,
   Promise<{ taskId: string }>
->();
+>("reports:reportInvestigationSink");

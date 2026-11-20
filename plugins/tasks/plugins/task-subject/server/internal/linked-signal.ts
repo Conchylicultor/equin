@@ -17,9 +17,7 @@ export interface TaskSubjectLinkedListener {
 
 export const TaskSubjectLinked =
   defineServerContribution<TaskSubjectLinkedListener>("task-subject-linked", {
+    // Complete: every listener must hear a link, so a process that files a
+    // task about a subject starts them all (or the read throws, naming them).
     docLabel: (l) => `${l.subjectKind} → ${l.id}`,
-    absentOnHost: {
-      reason:
-        "called where a task is filed about a subject (a launch, tasks' machine half, desktop-only): a host that files no such task never calls it",
-    },
   });

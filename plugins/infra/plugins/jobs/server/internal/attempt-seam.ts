@@ -61,7 +61,9 @@ export type JobAttemptOutcome =
  * as before boot or on a host without the reports engine — or `false`) falls
  * back to a plain server error, so a failed attempt can never go unreported.
  */
-export const jobAttemptSink = defineRequestSink<JobAttemptEvent, boolean>();
+export const jobAttemptSink = defineRequestSink<JobAttemptEvent, boolean>(
+  "infra/plugins/jobs:jobAttemptSink",
+);
 
 /** Announce a failed attempt; reported as a plain server error when no
  * consumer owns it. Never throws (the failure path must not gain a second

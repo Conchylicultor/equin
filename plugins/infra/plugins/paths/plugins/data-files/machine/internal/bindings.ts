@@ -24,7 +24,13 @@ import { diskTree } from "./disk-tree";
 const locationToken = defineServerContribution<{
   root: FileRoot;
   dataDir: DataDir;
-}>("data-files.root-location", { docLabel: (p) => p.root.id });
+}>("data-files.root-location", {
+  docLabel: (p) => p.root.id,
+  partial: {
+    reason:
+      "a location binds a root that code of a started plugin declared: a process binds the roots its own modules declare, and `fileRootBindings` still fails its boot for any declared root no started plugin binds",
+  },
+});
 
 /**
  * Where a declared file root lives on this computer: the data dir it names.

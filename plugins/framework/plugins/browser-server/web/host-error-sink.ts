@@ -18,4 +18,6 @@ export interface HostServerErrorInfo {
   error: HostServerError;
 }
 
-export const hostServerErrorSink = defineReportSink<HostServerErrorInfo>();
+export const hostServerErrorSink = defineReportSink<HostServerErrorInfo>(
+  "framework/plugins/browser-server:hostServerErrorSink",
+);

@@ -26,5 +26,6 @@ export type ThemeResolutionFault =
  * Where the painter reports a `ThemeResolutionFault`. Theme-engine must not
  * import `reports`, so a reports sub-plugin registers the mapping to a report.
  */
-export const themeResolutionReportSink =
-  defineReportSink<ThemeResolutionFault>();
+export const themeResolutionReportSink = defineReportSink<ThemeResolutionFault>(
+  "ui/plugins/theme-engine:themeResolutionReportSink",
+);

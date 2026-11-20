@@ -1,6 +1,13 @@
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import type { z } from "zod";
-import type { Registration } from "@plugins/framework/plugins/server-core/core";
+import {
+  registeringPlugin,
+  type Registration,
+} from "@plugins/framework/plugins/server-core/core";
+import {
+  asFsPath,
+  asPluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import type { HostPoolId } from "@plugins/infra/plugins/host/plugins/host-admission/core";
@@ -82,6 +89,14 @@ export interface DefineSupervisedTaskSpec<P extends z.ZodType> {
    * an idle process. Absent, the child boots at once.
    */
   admission?: HostPoolId;
+  /**
+   * Start the child with only what the task needs: the plugin that registers
+   * it (read at registration, so it cannot name another), what that plugin
+   * imports, and the contributors of `reads` — the contributed lists (debug
+   * names) the body reads whole. Every other complete list throws when read
+   * (server-core's list rule). Absent, the child starts the whole app.
+   */
+  start?: { readonly reads: readonly string[] };
 }
 
 const tasks = new Map<string, RegisteredSupervisedTask>();
@@ -113,6 +128,24 @@ export function defineSupervisedTask<P extends z.ZodType>(
         `lowercase alphanumeric segments separated by "." or "-" (e.g. "backup.run").`,
     );
   }
+  // The plugin whose `register` registered this task — its child's starting
+  // point (`spec.start`). Set at registration, which every invoke follows.
+  let declaredBy: string | null = null;
+  const startArgs = (): string[] => {
+    if (spec.start === undefined) return [];
+    if (declaredBy === null) {
+      throw new Error(
+        `[supervised-task] ${spec.id}: invoked before its plugin registered it, so its child's starting plugin is unknown.`,
+      );
+    }
+    return [
+      "--start",
+      declaredBy,
+      ...(spec.start.reads.length === 0
+        ? []
+        : ["--reads", spec.start.reads.join(",")]),
+    ];
+  };
   const task: SupervisedTask<P> = {
     id: spec.id,
     execute: async (raw) => {
@@ -135,6 +168,7 @@ export function defineSupervisedTask<P extends z.ZodType>(
         "--namespace",
         runtimeNamespace(),
         ...(spec.admission === undefined ? [] : ["--admit", spec.admission]),
+        ...startArgs(),
       ],
       // `./equin` is a path relative to the checkout root, and the
       // backend's own cwd is its `server-core` directory.
@@ -153,6 +187,13 @@ export function defineSupervisedTask<P extends z.ZodType>(
         );
       }
       tasks.set(spec.id, task);
+      const plugin = registeringPlugin();
+      if (spec.start !== undefined && plugin === null) {
+        throw new Error(
+          `[supervised-task] ${spec.id}: registered outside a plugin's register phase, so its child's starting plugin is unknown.`,
+        );
+      }
+      if (plugin !== null) declaredBy = asFsPath(asPluginId(plugin));
     },
   };
   return task;

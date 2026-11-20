@@ -15,7 +15,9 @@ export type OptimisticRejectionReport = Parameters<
  * lives). A report sink, so a rejection emitted before the component mounts
  * is held and replayed to it, never dropped.
  */
-export const rejectionToastSink = defineReportSink<OptimisticRejectionReport>();
+export const rejectionToastSink = defineReportSink<OptimisticRejectionReport>(
+  "reports/plugins/optimistic-rejection:rejectionToastSink",
+);
 
 // The handler of `network/live`'s `optimisticRejectionSink`, drained through a
 // `ReportSinks.Collector` keyed by `network.live` (so it ships only where

@@ -21,4 +21,6 @@ export interface FixedReportOccurrence {
  * depends on that judgement, which reads git and the fix ledger.
  */
 export const fixedReportOccurrenceSink =
-  defineReportSink<FixedReportOccurrence>();
+  defineReportSink<FixedReportOccurrence>(
+    "reports/plugins/engine:fixedReportOccurrenceSink",
+  );

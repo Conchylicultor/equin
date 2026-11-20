@@ -293,3 +293,8 @@ export type {
   HostContributionBarrel,
   HostRead,
 } from "./browser-host-coverage";
+export {
+  generateServerContributors,
+  renderServerContributors,
+  serverContributorsPath,
+} from "./server-contributors-gen";

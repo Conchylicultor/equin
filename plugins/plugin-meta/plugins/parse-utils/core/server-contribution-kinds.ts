@@ -11,8 +11,8 @@ export interface ServerContributionKindDecl {
   kind: string;
   /** The `const` the token is bound to (`export const X = defineServerContribution(…)`), when it is. */
   binding?: string;
-  /** Declares `absentOnHost` — a host may run without some of its contributors. */
-  absentOnHost: boolean;
+  /** Declares `partial` — a host may run without some of its contributors. */
+  partial: boolean;
   /** Opened to companions (`companions: true`): a `companion: true` contribution ships with its declarer. */
   companions: boolean;
 }
@@ -112,9 +112,9 @@ export function parseServerContributionDeclarations(
     out.push({
       kind,
       ...(binding !== undefined ? { binding } : {}),
-      absentOnHost:
+      partial:
         options !== undefined &&
-        topLevelFieldAt(masked, options, "absentOnHost") !== undefined,
+        topLevelFieldAt(masked, options, "partial") !== undefined,
       companions,
     });
   }

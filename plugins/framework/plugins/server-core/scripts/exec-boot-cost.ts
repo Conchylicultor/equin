@@ -4,7 +4,12 @@
 // pays (graph import, register, contributions, the `onReadyBlocking` barrier).
 //
 //   ./equin run plugins/framework/plugins/server-core/scripts/exec-boot-cost.ts \
-//     --namespace <ns> [--json]
+//     --namespace <ns> [--json] [--start <pluginPath> [--reads <kind>,…]]
+//
+// `--start` boots the way a job that declares its `reads` does
+// (`defineSupervisedJob`): only that plugin and what it needs
+// (`resolveStartSet`), the list rule armed — so a complete list read while
+// starting throws here exactly as it would in the job.
 //
 // `<ns>` must be a namespace whose serving backend has booted THIS checkout's
 // code (its own worktree after `./equin build`): an exec child only verifies
@@ -27,7 +32,12 @@ import { getProfilingData } from "../core";
 import { runExec } from "../cli";
 
 const { values } = parseArgs({
-  options: { namespace: { type: "string" }, json: { type: "boolean" } },
+  options: {
+    namespace: { type: "string" },
+    json: { type: "boolean" },
+    start: { type: "string" },
+    reads: { type: "string" },
+  },
 });
 if (values.namespace === undefined)
   throw new Error("--namespace <ns> is required");
@@ -35,57 +45,84 @@ if (values.namespace === undefined)
 const preScriptMs = performance.now();
 const cpu0 = process.cpuUsage();
 
-await runExec(asNamespace(values.namespace), async () => {
-  const cpu = process.cpuUsage();
-  const profile = getProfilingData();
-  const { serverEntries, machineEntries } =
-    await import("../bin/active-runtime");
-  // Bun lists every loaded module, ESM included, in require.cache.
-  const loaded = Object.keys(require.cache);
-  const repoModules = loaded.filter(
-    (p) => !p.includes("/node_modules/"),
-  ).length;
-  const blocking = profile.spans
-    .filter((s) => s.phase === "onReadyBlocking")
-    .sort((a, b) => b.durationMs - a.durationMs)
-    .slice(0, 8)
-    .map((s) => ({ label: s.label, ms: Math.round(s.durationMs) }));
-  // Checkpoint offsets start at the profiler module's evaluation; shift them
-  // onto the process clock so they line up with `preScriptMs`.
-  const base = profile.bootStartOffsetMs;
-  const result = {
-    preScriptMs: Math.round(preScriptMs),
-    checkpoints: profile.memoryCheckpoints.map((c) => ({
-      label: c.label,
-      wallMs: Math.round(base + c.atMs),
-      cpuMs: c.cpuMs === undefined ? null : Math.round(c.cpuMs),
-    })),
-    bodyWallMs: Math.round(performance.now()),
-    bodyCpuMs: Math.round((cpu.user + cpu.system) / 1000),
-    scriptCpuMs: Math.round(
-      (cpu.user - cpu0.user + cpu.system - cpu0.system) / 1000,
-    ),
-    plugins: serverEntries.length + machineEntries.length,
-    modules: {
-      total: loaded.length,
-      repo: repoModules,
-      npm: loaded.length - repoModules,
-    },
-    slowestBlockingHooks: blocking,
-  };
-  if (values.json) {
-    console.log(JSON.stringify(result));
-    return;
-  }
-  console.log(`process start → script: ${result.preScriptMs} ms`);
-  for (const c of result.checkpoints)
-    console.log(`${c.label.padEnd(24)} wall ${c.wallMs} ms  cpu ${c.cpuMs} ms`);
-  console.log(
-    `job body starts         wall ${result.bodyWallMs} ms  cpu ${result.bodyCpuMs} ms`,
-  );
-  console.log(
-    `plugins ${result.plugins}, modules ${result.modules.total} (repo ${result.modules.repo}, npm ${result.modules.npm})`,
-  );
-  for (const h of blocking)
-    console.log(`  onReadyBlocking ${h.label}: ${h.ms} ms`);
-});
+const start =
+  values.start === undefined
+    ? undefined
+    : {
+        root: values.start,
+        reads:
+          values.reads === undefined || values.reads === ""
+            ? []
+            : values.reads.split(","),
+        label: `exec-boot-cost --start ${values.start}`,
+        fix: (kind: string) => `pass --reads ${kind} (or classify the list)`,
+      };
+
+await runExec(
+  asNamespace(values.namespace),
+  async () => {
+    const cpu = process.cpuUsage();
+    const profile = getProfilingData();
+    const { serverEntries, machineEntries } =
+      await import("../bin/active-runtime");
+    // Started, not registered: a partial start loads only its set.
+    const started = new Set(
+      Object.keys(require.cache).flatMap((p) => {
+        const m = /\/plugins\/(.+?)\/(server|machine)\/index\.ts$/.exec(p);
+        return m === null ? [] : [`${m[1]}#${m[2]}`];
+      }),
+    ).size;
+    // Bun lists every loaded module, ESM included, in require.cache.
+    const loaded = Object.keys(require.cache);
+    const repoModules = loaded.filter(
+      (p) => !p.includes("/node_modules/"),
+    ).length;
+    const blocking = profile.spans
+      .filter((s) => s.phase === "onReadyBlocking")
+      .sort((a, b) => b.durationMs - a.durationMs)
+      .slice(0, 8)
+      .map((s) => ({ label: s.label, ms: Math.round(s.durationMs) }));
+    // Checkpoint offsets start at the profiler module's evaluation; shift them
+    // onto the process clock so they line up with `preScriptMs`.
+    const base = profile.bootStartOffsetMs;
+    const result = {
+      preScriptMs: Math.round(preScriptMs),
+      checkpoints: profile.memoryCheckpoints.map((c) => ({
+        label: c.label,
+        wallMs: Math.round(base + c.atMs),
+        cpuMs: c.cpuMs === undefined ? null : Math.round(c.cpuMs),
+      })),
+      bodyWallMs: Math.round(performance.now()),
+      bodyCpuMs: Math.round((cpu.user + cpu.system) / 1000),
+      scriptCpuMs: Math.round(
+        (cpu.user - cpu0.user + cpu.system - cpu0.system) / 1000,
+      ),
+      plugins: serverEntries.length + machineEntries.length,
+      started,
+      modules: {
+        total: loaded.length,
+        repo: repoModules,
+        npm: loaded.length - repoModules,
+      },
+      slowestBlockingHooks: blocking,
+    };
+    if (values.json) {
+      console.log(JSON.stringify(result));
+      return;
+    }
+    console.log(`process start → script: ${result.preScriptMs} ms`);
+    for (const c of result.checkpoints)
+      console.log(
+        `${c.label.padEnd(24)} wall ${c.wallMs} ms  cpu ${c.cpuMs} ms`,
+      );
+    console.log(
+      `job body starts         wall ${result.bodyWallMs} ms  cpu ${result.bodyCpuMs} ms`,
+    );
+    console.log(
+      `plugins ${result.started} started of ${result.plugins}, modules ${result.modules.total} (repo ${result.modules.repo}, npm ${result.modules.npm})`,
+    );
+    for (const h of blocking)
+      console.log(`  onReadyBlocking ${h.label}: ${h.ms} ms`);
+  },
+  start === undefined ? {} : { start },
+);

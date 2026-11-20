@@ -1,5 +1,8 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
-import type { ComposedEntry } from "@plugins/framework/plugins/server-core/core";
+import {
+  isPartialStart,
+  type ComposedEntry,
+} from "@plugins/framework/plugins/server-core/core";
 import {
   configValues,
   configGitValues,
@@ -770,6 +773,7 @@ export function getScopedDescriptors(scope: "app"): {
   hierarchyPath: string;
   storePath: string;
 }[] {
+  assertWholeRegistry("getScopedDescriptors");
   const out: {
     descriptor: ConfigDescriptor;
     hierarchyPath: string;
@@ -849,5 +853,20 @@ export const configTiersServed = serveValue(configTiers, {
 });
 
 export function getAllDescriptors(): [string, ConfigDescriptor][] {
+  assertWholeRegistry("getAllDescriptors");
   return [...descriptorByPath.entries()];
+}
+
+/**
+ * A process that started only some plugins (a job) registers only their
+ * descriptors (`ConfigV2.Register` is a per-contributor list): one config's
+ * value is right there, every config is not. Asking for every one throws
+ * rather than answering with the started plugins' share.
+ */
+function assertWholeRegistry(reader: string): void {
+  if (isPartialStart()) {
+    throw new Error(
+      `[config-v2] ${reader}() asks for every registered config, in a process that started only some plugins (a job): it holds only theirs. Read one config by its descriptor, or run this where the whole app starts.`,
+    );
+  }
 }

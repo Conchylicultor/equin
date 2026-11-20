@@ -1,9 +1,10 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { declareMemoryHostStorage } from "@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing";
-import type {
-  ServerPluginDefinition,
-  ServerRegistryEntry,
+import {
+  resolveStartSet,
+  type ServerPluginDefinition,
+  type ServerRegistryEntry,
 } from "@plugins/framework/plugins/server-core/core";
 import {
   declaredHostServiceIds,
@@ -22,26 +23,22 @@ type Entry = ServerRegistryEntry;
 
 /**
  * The registry entries reached from `roots` along the `dependsOn` edges
- * `follow` keeps. A root or edge target not in the registry fails loudly.
+ * `follow` keeps — server-core's one start-set resolver (what a job process
+ * starts), over the server halves alone (a portable host boots no `machine/`
+ * half). A root or edge target not in the registry fails loudly.
  */
 function closureOf(
   roots: readonly string[],
   follow: (path: string) => boolean,
 ): Set<string> {
-  const entries = new Map(serverEntries.map((e) => [e.pluginPath, e]));
-  const seen = new Set<string>();
-  const stack = [...roots];
-  while (stack.length > 0) {
-    const path = stack.pop()!;
-    if (seen.has(path)) continue;
-    const entry = entries.get(path);
-    if (entry === undefined) {
-      throw new Error(`${path} is not in the server registry`);
-    }
-    seen.add(path);
-    stack.push(...entry.dependsOn.filter(follow));
-  }
-  return seen;
+  const set = resolveStartSet({
+    entries: serverEntries,
+    roots,
+    reads: [],
+    contributors: {},
+    follow,
+  });
+  return new Set(set.why.keys());
 }
 
 /**

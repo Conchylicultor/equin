@@ -3,7 +3,12 @@ import { sql as drizzleSql } from "drizzle-orm";
 import { z } from "zod";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
-import { differingParts, schemaLayerStamp, STATE } from "./layer-stamp";
+import {
+  differingParts,
+  partialMismatches,
+  schemaLayerStamp,
+  STATE,
+} from "./layer-stamp";
 import {
   planSchemaSteps,
   type Migration,
@@ -29,11 +34,17 @@ const UNDEFINED_TABLE = "42P01";
  *    main, can never admit a child onto a database missing its migrations.
  * 2. The stored stamp equals `schemaLayerStamp(migrations, inputs)` — the
  *    derived layer (views, triggers, rollups) this code declares.
+ *
+ * `partial`: this process started only some plugins, so `inputs` holds only
+ * their declarations. Then 2 asks only that every item they declare is
+ * installed as they declare it (`partialMismatches`) — the objects this
+ * process's code can reach — not that the whole list is this code's.
  */
 export async function verifySchemaLayer(
   db: NodePgDatabase,
   migrations: readonly Migration[],
   inputs: SchemaLayerInputs,
+  opts: { readonly partial: boolean },
 ): Promise<SchemaLayerCheck> {
   const expected = schemaLayerStamp(migrations, inputs);
   const pending = await pendingMigrations(db, migrations);
@@ -52,9 +63,13 @@ export async function verifySchemaLayer(
     };
   }
   if (stored.stamp === expected) return { kind: "ready" };
+  const differing = opts.partial
+    ? partialMismatches(stored.stamp, expected)
+    : differingParts(stored.stamp, expected);
+  if (opts.partial && differing.length === 0) return { kind: "ready" };
   return {
     kind: "not-ready",
-    detail: `the serving backend last set it up (at ${stored.written_at}) for code whose ${differingParts(stored.stamp, expected).join(", ")} differ from this code's`,
+    detail: `the serving backend last set it up (at ${stored.written_at}) for code whose ${differing.join(", ")} differ from this code's`,
   };
 }
 

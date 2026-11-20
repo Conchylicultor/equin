@@ -33,7 +33,9 @@ export interface ResizeLoopReport {
   omittedDeferred: number;
 }
 
-export const resizeLoopReportSink = defineReportSink<ResizeLoopReport>();
+export const resizeLoopReportSink = defineReportSink<ResizeLoopReport>(
+  "primitives/plugins/dom/plugins/element-size/plugins/resize-loop-trace:resizeLoopReportSink",
+);
 
 type Recorded = {
   created: Error;

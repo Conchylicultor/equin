@@ -37,7 +37,9 @@ export interface OptimisticDivergenceReport {
 // plugin (`reports.optimistic-divergence`) registers the mapping to report() at
 // mount time. `emit` never throws — divergence is detected on a reconcile path.
 export const optimisticDivergenceReportSink =
-  defineReportSink<OptimisticDivergenceReport>();
+  defineReportSink<OptimisticDivergenceReport>(
+    "network/plugins/live:optimisticDivergenceReportSink",
+  );
 
 /**
  * The server PERMANENTLY rejected a write (`classifyRejection`): an optimistic
@@ -68,7 +70,9 @@ export interface OptimisticRejectionReport {
 export const REJECTION_MESSAGE_MAX = 500;
 
 export const optimisticRejectionSink =
-  defineReportSink<OptimisticRejectionReport>();
+  defineReportSink<OptimisticRejectionReport>(
+    "network/plugins/live:optimisticRejectionSink",
+  );
 
 /**
  * Is an HTTP failure a FINAL verdict on the op, or one a retry can overturn?

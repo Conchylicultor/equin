@@ -16,7 +16,7 @@ export const Trigger = defineServerContribution<TriggerSpec<any, any>>(
   "trigger",
   {
     docLabel: (t) => t.do.name,
-    absentOnHost: {
+    partial: {
       reason:
         "a trigger is its contributor's own reaction to an event (an event → one of its jobs): a host that does not boot the contributor does not react, and nothing a host serves reads the binding to answer",
     },

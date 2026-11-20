@@ -36,7 +36,10 @@ export interface ProcessCrash {
  * engine handles it (a `sinkHandlers` entry), so it is attached in every boot
  * mode from the `onReadyBlocking` phase on.
  */
-export const processCrashSink = defineRequestSink<ProcessCrash, boolean>();
+export const processCrashSink = defineRequestSink<ProcessCrash, boolean>(
+  "framework/plugins/server-core:processCrashSink",
+  { alwaysHandled: true },
+);
 
 /**
  * Whether a crash now belongs to `processCrashSink`'s handler. Before one is

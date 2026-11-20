@@ -19,7 +19,9 @@ export interface IconMissingGlyph {
  * below the ui-kit and must not import `reports`, so a reports sub-plugin
  * (`reports/icon-missing-glyph`) registers the mapping to a report.
  */
-export const iconMissingGlyphReportSink = defineReportSink<IconMissingGlyph>();
+export const iconMissingGlyphReportSink = defineReportSink<IconMissingGlyph>(
+  "ui/plugins/icons:iconMissingGlyphReportSink",
+);
 
 /** (sprite, id) pairs already reported on this page. */
 const reported = new Set<string>();

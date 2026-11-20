@@ -151,7 +151,9 @@ export type DuressLatchFault = { message: string } & CrashFields;
  * reporter. The latch's `machine/` half — loaded only by a desktop backend —
  * attaches it to `reportServerError`; elsewhere the stderr line is the record.
  */
-export const duressLatchFaultSink = defineReportSink<DuressLatchFault>();
+export const duressLatchFaultSink = defineReportSink<DuressLatchFault>(
+  "infra/plugins/host/plugins/duress/plugins/latch:duressLatchFaultSink",
+);
 
 /**
  * A failure of the latch's own machinery (the watch, a re-read), reported and

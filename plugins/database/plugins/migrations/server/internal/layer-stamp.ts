@@ -23,7 +23,7 @@ type Tx = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
 // the migration files (their names and content hashes) and every derived input
 // (`SchemaLayerInputs`), each `SchemaStampPart` included: what a plugin that
 // installs boot DDL of its own contributes (see "Boot DDL outside the layer"
-// below). `inputDigests` below answers one digest per key of that type, so an
+// below). `inputItems` below answers one item map per key of that type, so an
 // input added to the layer without a digest here is a tsc error — the stamp
 // cannot silently miss what the layer installs. What the layer does from DATA
 // (each rollup's reconcile, which heals drift) is the owner's alone and is not
@@ -71,106 +71,205 @@ type Tx = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
 // old version, as the old backend's writes do, and the new owner reinstalls it
 // at boot.
 
-/** Each input's digest: a pure function of the declarations, never of the database. */
-type InputDigests = {
-  readonly [K in keyof SchemaLayerInputs]-?: string;
+// ── Itemized: one digest per declared object ────────────────────────────────
+//
+// Each derived part is stored as one digest PER ITEM it installs (a view by
+// name, a rollup by table, a trigger set by id, …), never as one digest of the
+// whole list. A process that started only some plugins (a job, server-core's
+// `resolveStartSet`) holds only its own plugins' declarations: it can check
+// that every object ITS code declares is installed as it declares it — the
+// objects its code can reach, since a plugin's code imports the declarations
+// it reads — but it cannot recompute a digest of the whole list
+// (`verifySchemaLayer`'s `partial`). A whole process compares everything.
+//
+// What a partial check does not see: a trigger or rollup another plugin owns
+// that fires on a table the job writes. When a deploy changes only such an
+// item, a job admitted in the deploy window writes through the old one —
+// exactly as the old backend, still serving, writes through it (the argument
+// "Boot DDL outside the layer" makes above); the new owner reinstalls it at
+// its boot, and a rollup's reconcile heals what it maintained.
+
+/** One part's items: item key → its digest. */
+type Items = Readonly<Record<string, string>>;
+
+/** Each input's items: a pure function of the declarations, never of the database. */
+type InputItems = {
+  readonly [K in keyof SchemaLayerInputs]-?: Items;
 };
 
-const inputDigests = ({
+const digest = (text: string): string => sha256Hex(text).slice(0, 16);
+
+function itemsBy<T>(
+  list: readonly T[],
+  key: (item: T) => string,
+  text: (item: T, at: string) => string,
+  part: string,
+): Items {
+  const out: Record<string, string> = {};
+  for (const item of list) {
+    const k = key(item);
+    if (k in out) {
+      throw new Error(`[schema-stamp] ${part}: two declarations of "${k}"`);
+    }
+    out[k] = digest(text(item, `${part}[${k}]`));
+  }
+  return sorted(out);
+}
+
+function sorted(items: Record<string, string>): Items {
+  return Object.fromEntries(
+    Object.entries(items).sort(([a], [b]) => a.localeCompare(b)),
+  );
+}
+
+const inputItems = ({
   views,
   derivedTables,
   updatedAtSpecs,
   triggers,
   claimedTriggerSets,
   stampParts,
-}: SchemaLayerInputs): InputDigests => ({
-  // The compiled `CREATE VIEW`s in dependency order: what `rebuildDerivedViews`
-  // installs. (Its read aliases follow from these and the migrated tables.)
-  // Every list is put in a canonical order first: contributions arrive in
-  // load-wave order, which differs between two processes booting one code.
-  views: compiledDerivedViews(
-    [...views].sort((a, b) =>
-      getViewConfig(a.view).name.localeCompare(getViewConfig(b.view).name),
-    ),
-  )
-    .map((v) => `${v.name}\n${v.ddl}`)
-    .join("\n--\n"),
+}: SchemaLayerInputs): InputItems => ({
+  // Each view's compiled `CREATE VIEW` (what `rebuildDerivedViews` installs)
+  // and the views it is declared to depend on — compiled alone, so it needs
+  // no other view's declaration.
+  views: itemsBy(
+    views,
+    (v) => getViewConfig(v.view).name,
+    (v) => {
+      const [compiled] = compiledDerivedViews([{ view: v.view }]);
+      return `${compiled!.name}\n${compiled!.ddl}\n${[...(v.dependsOn ?? [])].sort().join(",")}`;
+    },
+    "views",
+  ),
   // Each rollup's definition: its table's DDL, columns and every source's
   // maintain function and triggers. `handle` is the drizzle read handle, a
   // view of `table`/`columns` already digested.
-  derivedTables: dataJson(
-    [...derivedTables]
-      .sort((a, b) => a.table.localeCompare(b.table))
-      .map(({ handle: _handle, ...definition }) => definition),
+  derivedTables: itemsBy(
+    derivedTables,
+    (t) => t.table,
+    ({ handle: _handle, ...definition }, at) => dataJson(definition, at),
     "derivedTables",
   ),
-  updatedAtSpecs: dataJson(
-    byId(updatedAtSpecs.map((s) => s.triggerSet)),
+  updatedAtSpecs: itemsBy(
+    updatedAtSpecs.map((s) => s.triggerSet),
+    (t) => t.id,
+    (t, at) => dataJson(t, at),
     "updatedAtSpecs",
   ),
-  triggers: dataJson(byId(triggers), "triggers"),
-  claimedTriggerSets: dataJson(
-    [...claimedTriggerSets].sort(),
+  triggers: itemsBy(
+    triggers,
+    (t) => t.id,
+    (t, at) => dataJson(t, at),
+    "triggers",
+  ),
+  claimedTriggerSets: itemsBy(
+    claimedTriggerSets,
+    (id) => id,
+    (id) => id,
     "claimedTriggerSets",
   ),
   // What boot DDL OUTSIDE the layer requires (`SchemaStampPart`): the queue
   // schema's library version, for one. The owner records the stamp only once
   // that DDL has committed too, at its `onReady`.
-  stampParts: dataJson(byId(stampParts), "stampParts"),
+  stampParts: itemsBy(
+    stampParts,
+    (p) => p.id,
+    (p, at) => dataJson(p, at),
+    "stampParts",
+  ),
 });
 
-function byId<T extends { readonly id: string }>(sets: readonly T[]): T[] {
-  return [...sets].sort((a, b) => a.id.localeCompare(b.id));
-}
+/** The stamp: the migrations' digest, then each derived part's items. */
+type Stamp = { readonly migrations: string } & InputItems;
 
-/** One digest per part of the layer: the migrations, then each derived input. */
-type StampParts = { readonly migrations: string } & InputDigests;
-
-const StoredStamp = z.record(z.string(), z.string());
+const StoredStamp = z
+  .object({ migrations: z.string() })
+  .catchall(z.record(z.string(), z.string()));
 
 /**
  * The stamp of the schema layer `migrations` + `inputs` install. Pure: the
  * owner writes it after committing the layer, a verifier computes it from its
- * own code and compares.
- *
- * NOTE for a boot that collects only part of the graph (a job booted on its
- * plugin closure, task-1794734812-18qcur): `inputs` must then be the WHOLE
- * app's, from a build-time artifact — a stamp of a partial graph never equals
- * the owner's, and the child would always be refused (loudly, never wrongly
- * admitted).
+ * own code and compares — whole (`differingParts`), or, in a process that
+ * started only some plugins, item by item for what it holds
+ * (`partialMismatches`).
  */
 export function schemaLayerStamp(
   migrations: readonly Migration[],
   inputs: SchemaLayerInputs,
 ): string {
-  const digests: StampParts = {
-    migrations: migrations.map((m) => `${m.file} ${m.hash}`).join("\n"),
-    ...inputDigests(inputs),
+  const stamp: Stamp = {
+    migrations: digest(migrations.map((m) => `${m.file} ${m.hash}`).join("\n")),
+    ...inputItems(inputs),
   };
-  // Stored as each part's hash, by part, so a mismatch says WHICH part of the
-  // layer differs (a pending migration, a view edit) rather than only that one does.
+  // Parts in a canonical order, so equal code always gives equal text.
   return JSON.stringify(
     Object.fromEntries(
-      Object.entries(digests)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([key, digest]) => [key, sha256Hex(digest).slice(0, 16)]),
+      Object.entries(stamp).sort(([a], [b]) => a.localeCompare(b)),
     ),
   );
 }
 
-/** The parts two stamps disagree on, by name. */
-export function differingParts(stored: string, expected: string): string[] {
-  const want = StoredStamp.parse(JSON.parse(expected));
-  let have: Record<string, string>;
+type ParsedStamp = z.infer<typeof StoredStamp>;
+
+function parseStored(stored: string): ParsedStamp | null {
   try {
-    have = StoredStamp.parse(JSON.parse(stored));
+    return StoredStamp.parse(JSON.parse(stored));
   } catch (err) {
     if (!(err instanceof SyntaxError) && !(err instanceof z.ZodError))
       throw err;
-    return ["(a stamp in another format)"];
+    return null;
   }
-  const keys = new Set([...Object.keys(want), ...Object.keys(have)]);
-  return [...keys].filter((k) => want[k] !== have[k]).sort();
+}
+
+/** The parts two stamps disagree on, by name (with up to three items each). */
+export function differingParts(stored: string, expected: string): string[] {
+  const want = StoredStamp.parse(JSON.parse(expected));
+  const have = parseStored(stored);
+  if (have === null) return ["(a stamp in another format)"];
+  const out: string[] = [];
+  if (want.migrations !== have.migrations) out.push("migrations");
+  const parts = new Set([...Object.keys(want), ...Object.keys(have)]);
+  parts.delete("migrations");
+  for (const part of [...parts].sort()) {
+    const w = (want[part] ?? {}) as Items;
+    const h = (have[part] ?? {}) as Items;
+    const keys = [...new Set([...Object.keys(w), ...Object.keys(h)])]
+      .filter((k) => w[k] !== h[k])
+      .sort();
+    if (keys.length > 0) out.push(describe(part, keys));
+  }
+  return out;
+}
+
+/**
+ * What a process that started only some plugins finds different: the
+ * migrations, or any item ITS declarations hold that the stored stamp does not
+ * hold as it declares it. Items only other plugins declare are not its to
+ * check. Empty: the database is set up for everything this process's code
+ * declares.
+ */
+export function partialMismatches(stored: string, own: string): string[] {
+  const mine = StoredStamp.parse(JSON.parse(own));
+  const have = parseStored(stored);
+  if (have === null) return ["(a stamp in another format)"];
+  const out: string[] = [];
+  if (mine.migrations !== have.migrations) out.push("migrations");
+  for (const part of Object.keys(mine).sort()) {
+    if (part === "migrations") continue;
+    const m = mine[part] as Items;
+    const h = (have[part] ?? {}) as Items;
+    const keys = Object.keys(m)
+      .filter((k) => m[k] !== h[k])
+      .sort();
+    if (keys.length > 0) out.push(describe(part, keys));
+  }
+  return out;
+}
+
+function describe(part: string, keys: readonly string[]): string {
+  const shown = keys.slice(0, 3).join(", ");
+  return `${part} (${shown}${keys.length > 3 ? `, +${keys.length - 3}` : ""})`;
 }
 
 /**
@@ -265,6 +364,8 @@ async function writeStamp(tx: Tx, stamp: string): Promise<void> {
     `,
   );
   await tx.execute(
-    drizzleSql`SELECT pg_notify(${SCHEMA_STAMPED_CHANNEL}, ${stamp})`,
+    // A wake-up, not the stamp: a waiter re-reads the row, and an itemized
+    // stamp can exceed NOTIFY's 8000-byte payload.
+    drizzleSql`SELECT pg_notify(${SCHEMA_STAMPED_CHANNEL}, ${digest(stamp)})`,
   );
 }

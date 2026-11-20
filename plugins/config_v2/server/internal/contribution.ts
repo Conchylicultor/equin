@@ -17,5 +17,9 @@ interface ConfigRegistration {
 export const ConfigV2 = {
   Register: defineServerContribution<ConfigRegistration>("ConfigV2.Register", {
     docLabel: (c) => c.descriptor.name,
+    partial: {
+      reason:
+        "a registration is its contributor's own config document: a process registers the descriptors its started plugins contribute, and `getConfig` of a descriptor it did not register throws, naming it — a browser host's config is held whole by its own arm (`config-v2:registrations-paired`)",
+    },
   }),
 };

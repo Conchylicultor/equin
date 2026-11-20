@@ -1,11 +1,15 @@
 /** Fire-and-forget: emit() hands a report to whoever consumes it, now or later. */
 export interface ReportSink<TBody> {
+  /** Its identity, `<plugin path>:<binding>`: what names its handler in the build's table. */
+  readonly id: string;
   register(fn: ((body: TBody) => void) | null): void;
   emit(body: TBody): void;
 }
 
 /** Ask-and-answer: emit() returns the handler's answer, or undefined when nobody is registered. */
 export interface RequestSink<TBody, TResult> {
+  /** Its identity, `<plugin path>:<binding>`: what names its handler in the build's table. */
+  readonly id: string;
   register(fn: ((body: TBody) => TResult) | null): void;
   emit(body: TBody): TResult | undefined;
 }
@@ -30,10 +34,27 @@ export const REPORT_SINK_HOLD_CAP = 100;
 // The hold is bounded — this is an error path, not a queue. It keeps the FIRST
 // REPORT_SINK_HOLD_CAP reports (the first failures are usually the cause, the
 // rest their cascade) and drops later ones, warning once per overflow.
-export function defineReportSink<TBody>(): ReportSink<TBody> {
-  const sink = createReportSink<TBody>();
+export function defineReportSink<TBody>(id: string): ReportSink<TBody> {
+  const sink = createReportSink<TBody>(id);
   holdingSinks.add(sink);
+  declared.add(id);
   return sink;
+}
+
+// Every sink id this process declared (module eval) whose missing handler
+// would lose something silently: every REPORT sink (a report emitted on one
+// with no handler is held, and lost when the process exits), and a request
+// sink declared `alwaysHandled`.
+// So a process that started only some plugins starts the handler of each
+// (server-core's partial start), as it starts the provider of each host
+// service its modules declare. Any other request sink is not here: its
+// emitter is answered `undefined` when nobody handles it, so a missing
+// handler is the caller's typed answer.
+const declared = new Set<string>();
+
+/** The ids of the sinks this process's modules declared that must be handled, sorted. */
+export function declaredHandledSinkIds(): string[] {
+  return [...declared].sort();
 }
 
 // Every report sink defined in this process, so a test runner can empty their
@@ -49,7 +70,7 @@ export function discardHeldReports(): void {
   for (const sink of holdingSinks) sink.discardHeld();
 }
 
-function createReportSink<TBody>(): ReportSink<TBody> & {
+function createReportSink<TBody>(id: string): ReportSink<TBody> & {
   discardHeld(): void;
 } {
   let handler: ((body: TBody) => void) | null = null;
@@ -66,6 +87,7 @@ function createReportSink<TBody>(): ReportSink<TBody> & {
   }
 
   return {
+    id,
     discardHeld() {
       held = [];
       overflowWarned = false;
@@ -97,12 +119,22 @@ function createReportSink<TBody>(): ReportSink<TBody> & {
 // moved on has nobody to go to, and replaying the request later would repeat a
 // side effect the caller already fell back from. emit() returns undefined when
 // nobody is registered — the caller's explicit "no consumer" branch.
-export function defineRequestSink<TBody, TResult>(): RequestSink<
-  TBody,
-  TResult
-> {
+export function defineRequestSink<TBody, TResult>(
+  id: string,
+  opts?: {
+    /**
+     * Its emitter cannot take `undefined` for an answer without losing what
+     * it carried (a crash's report, filed on the way out): a process that
+     * started only some plugins starts its handler, as it does a report
+     * sink's (`declaredHandledSinkIds`).
+     */
+    alwaysHandled?: true;
+  },
+): RequestSink<TBody, TResult> {
   let handler: ((body: TBody) => TResult) | null = null;
+  if (opts?.alwaysHandled === true) declared.add(id);
   return {
+    id,
     register(fn) {
       handler = fn;
     },

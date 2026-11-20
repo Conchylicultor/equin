@@ -2,13 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { parseServerContributionDeclarations } from "./server-contribution-kinds";
 
 describe("parseServerContributionDeclarations", () => {
-  test("reads each literal kind, its binding, absentOnHost and companions", () => {
+  test("reads each literal kind, its binding, partial and companions", () => {
     expect(
       parseServerContributionDeclarations(`
 export const A = defineServerContribution<{ id: string }>("a.kind", { docLabel: (p) => p.id });
 export const B = defineServerContribution<{ restore(id: string): Promise<string> }>(
   "b.kind",
-  { absentOnHost: { reason: "a reaction" } },
+  { partial: { reason: "a reaction" } },
 );
 const C = defineServerContribution<{ reason: string }>("c.kind", {
   companions: true,
@@ -19,9 +19,9 @@ const s = 'defineServerContribution("in.a.string", { companions: 1 })';
 export function defineServerContribution<P>(debugName: string, opts: { companions: true }) {}
 `),
     ).toEqual([
-      { kind: "a.kind", binding: "A", absentOnHost: false, companions: false },
-      { kind: "b.kind", binding: "B", absentOnHost: true, companions: false },
-      { kind: "c.kind", binding: "C", absentOnHost: false, companions: true },
+      { kind: "a.kind", binding: "A", partial: false, companions: false },
+      { kind: "b.kind", binding: "B", partial: true, companions: false },
+      { kind: "c.kind", binding: "C", partial: false, companions: true },
     ]);
   });
 
@@ -31,7 +31,7 @@ export function defineServerContribution<P>(debugName: string, opts: { companion
         `export const N = defineServerContribution<X>("n.kind", { docLabel: (p) => ({ companions: true }).x });`,
       ),
     ).toEqual([
-      { kind: "n.kind", binding: "N", absentOnHost: false, companions: false },
+      { kind: "n.kind", binding: "N", partial: false, companions: false },
     ]);
   });
 

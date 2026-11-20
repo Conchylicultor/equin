@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ServerContributionToken } from "@plugins/framework/plugins/server-core/core";
 import type { HostPoolId } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { recordRunError } from "./builtin-ledger";
 import {
@@ -8,8 +9,22 @@ import {
 import { admitBackground } from "./admit";
 import { defineSupervisedTask, type SupervisedTask } from "./task/registry";
 
+/**
+ * The contributed lists a `run` body declares it reads whole
+ * (`defineSupervisedJob`'s `reads`): any server contribution kind.
+ */
+export type ReadList = readonly ServerContributionToken<unknown, never>[];
+
 /** What a `run` body is handed in its child process. */
-export interface SupervisedRunContext {
+export interface SupervisedRunContext<R extends ReadList = ReadList> {
+  /**
+   * Every contribution to `list`, one of the lists the job declared in
+   * `reads` (a tsc error otherwise) — the lists its child started every
+   * contributor of.
+   */
+  readonly read: <T extends R[number]>(
+    list: T,
+  ) => ReturnType<T["getContributions"]>;
   /** This run's id — the ledger row, the transcript and the marker name. */
   readonly runId: string;
   /**
@@ -56,10 +71,18 @@ function log(line: string, stream: "stdout" | "stderr" = "stdout"): void {
  * whose `.transform()` is not idempotent fails here, loudly, rather than
  * running on a value it never accepted.
  */
-export function defineRunBodyTask<S extends z.ZodType>(opts: {
+export function defineRunBodyTask<
+  S extends z.ZodType,
+  R extends ReadList,
+>(opts: {
   readonly name: string;
   readonly input: S;
-  readonly run: (input: z.infer<S>, ctx: SupervisedRunContext) => Promise<void>;
+  readonly run: (
+    input: z.infer<S>,
+    ctx: SupervisedRunContext<R>,
+  ) => Promise<void>;
+  /** See `RunBody.reads` (`define-supervised-job.ts`). */
+  readonly reads: R | undefined;
   readonly recordErrors: boolean;
   /** See `RunBody.admission` (`define-supervised-job.ts`). */
   readonly admission: HostPoolId | undefined;
@@ -68,10 +91,24 @@ export function defineRunBodyTask<S extends z.ZodType>(opts: {
     id: opts.name,
     payload: RUN_BODY_PAYLOAD,
     admission: opts.admission,
+    ...(opts.reads === undefined
+      ? {}
+      : { start: { reads: opts.reads.map((list) => list.debugName) } }),
     run: async ({ runId, input }) => {
       const parsed: z.infer<S> = opts.input.parse(input);
       try {
         await opts.run(parsed, {
+          read: <T extends R[number]>(list: T) => {
+            // The type already refuses an undeclared list; this is the same
+            // rule for a value that reached here past it (a cast).
+            const declared: ReadList = opts.reads ?? [];
+            if (!declared.includes(list)) {
+              throw new Error(
+                `[supervised-job] ${opts.name}: read("${list.debugName}"), a list the job does not declare in \`reads\`.`,
+              );
+            }
+            return list.getContributions() as ReturnType<T["getContributions"]>;
+          },
           runId,
           log,
           exec: mintExecContext("supervised-run", admitBackground),

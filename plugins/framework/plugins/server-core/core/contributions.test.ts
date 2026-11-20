@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
+  clearCollectedContributions,
+  clearPartialStart,
   collectContributions,
+  declarePartialStart,
   defineServerContribution,
+  isPartialStart,
+  PartialListReadError,
 } from "./contributions";
 
 const Alpha = defineServerContribution<{ name: string }>("test.alpha");
@@ -105,5 +110,39 @@ describe("a kind opened to companions", () => {
     expect(() => Alpha({ name: "a", companion: true })).toThrow(
       /"test\.alpha" is not opened to companions/,
     );
+  });
+});
+
+describe("the list rule (a partial start)", () => {
+  const Whole = defineServerContribution<{ name: string }>("test.whole");
+  const Own = defineServerContribution<{ name: string }>("test.own", {
+    partial: { reason: "each entry is its contributor's own" },
+  });
+
+  test("a complete list missing a contributor throws, naming it and the fix; a partial one answers", () => {
+    collectContributions([
+      { id: "p", contributions: [Whole({ name: "w" }), Own({ name: "o" })] },
+    ]);
+    declarePartialStart({
+      startedFrom: "job test.job (plugin p)",
+      started: 1,
+      total: 2,
+      missingContributors: (kind) => (kind === "test.whole" ? ["q"] : []),
+      fix: (kind) => `declare ${kind}`,
+    });
+    try {
+      expect(isPartialStart()).toBe(true);
+      expect(() => Whole.getContributions()).toThrow(PartialListReadError);
+      expect(() => Whole.getContributionsIfCollected()).toThrow(
+        /"test.whole" is a complete list.*\nNot started: 1 contributor \(q\)\.\nStarted from: job test.job \(plugin p\)\.\nFix: declare test.whole/,
+      );
+      expect(Own.getContributions().map((c) => c.name)).toEqual(["o"]);
+      // The sanctioned "what did my own plugins declare" read.
+      expect(Whole.startedContributions().map((c) => c.name)).toEqual(["w"]);
+    } finally {
+      clearPartialStart();
+      clearCollectedContributions();
+    }
+    expect(isPartialStart()).toBe(false);
   });
 });

@@ -17,7 +17,9 @@ import type { ReportInput } from "@plugins/reports/core";
  * outbox's drain records through the engine. Held until the writer attaches,
  * so a report from early in a child's boot is not lost.
  */
-export const reportOutboxSink = defineReportSink<ReportInput>();
+export const reportOutboxSink = defineReportSink<ReportInput>(
+  "reports/plugins/engine:reportOutboxSink",
+);
 
 /**
  * The synchronous twin of {@link reportOutboxSink}: a fatal report
@@ -26,7 +28,10 @@ export const reportOutboxSink = defineReportSink<ReportInput>();
  * same way; it answers whether the entry is in place. A request sink — never
  * held: a report held past the exit is lost anyway, and the caller must know.
  */
-export const reportOutboxFatalSink = defineRequestSink<ServerReport, boolean>();
+export const reportOutboxFatalSink = defineRequestSink<ServerReport, boolean>(
+  "reports/plugins/engine:reportOutboxFatalSink",
+  { alwaysHandled: true },
+);
 
 /**
  * What attaches the writers of {@link reportOutboxSink} and

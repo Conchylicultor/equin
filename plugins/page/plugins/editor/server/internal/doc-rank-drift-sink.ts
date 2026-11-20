@@ -19,7 +19,9 @@ export type DocRankDrift = Extract<BootDocRankOutcome, { kind: "drift" }>;
  * would stop loading. The sink holds what boot emitted until the report plugin
  * registers, then replays it (the `orphanedAttemptSink` precedent).
  */
-export const docRankDriftSink = defineReportSink<DocRankDrift>();
+export const docRankDriftSink = defineReportSink<DocRankDrift>(
+  "page/plugins/editor:docRankDriftSink",
+);
 
 /**
  * The `onReadyBlocking` step: bring every sidebar group to I-DR, and announce

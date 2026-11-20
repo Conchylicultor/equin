@@ -27,4 +27,6 @@ export interface HostBootInfo {
   readyAtMs: number;
 }
 
-export const hostBootReportSink = defineReportSink<HostBootInfo>();
+export const hostBootReportSink = defineReportSink<HostBootInfo>(
+  "framework/plugins/browser-server:hostBootReportSink",
+);

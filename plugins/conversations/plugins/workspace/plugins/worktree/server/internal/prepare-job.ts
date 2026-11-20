@@ -59,6 +59,9 @@ export const worktreePrepareJob = defineSupervisedJob({
   // holding nothing. Its row is open meanwhile, so the spawn keeps waiting on
   // it (`prepareWorktree`) — a queued checkout is not a failed one.
   admission: "worktree-prepare",
+  // Its child starts this plugin and what it imports, not the whole app (an
+  // agent launch waits on it): the checkout reads no contributed list.
+  reads: [],
   // No signal: the child is bounded by git's own timeouts and install's, and
   // nothing else holds it.
   async run({ attemptId, path, conversationId }, { log }) {

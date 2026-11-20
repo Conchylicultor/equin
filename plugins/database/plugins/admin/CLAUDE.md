@@ -104,7 +104,7 @@ Two more things that look wrong but are load-bearing:
   parameter** instead of reading the registry. `getContributions()` answers `[]`
   in any process that never booted the server, so a registry read here would let
   `./equin db fork` silently produce a full ~2 GB copy that looks fine.
-  `forkExclusions()` (a booted backend) and `forkExclusionsFrom(plugins)`
+  `forkExclusions(tables, schemas)` (the fork job's read lists) and `forkExclusionsFrom(plugins)`
   (loaded definitions — what `./equin db fork` reads, in a probe child that
   loads the plugin graph with no backend running) throw on empty for the same
   reason. The probe hands the set back as JSON, which is why `ForkExclusions`

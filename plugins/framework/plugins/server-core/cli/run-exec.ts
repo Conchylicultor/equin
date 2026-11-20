@@ -133,6 +133,20 @@ export async function runExec(
      * (`SchemaRole`'s `yieldAdmission`) — so a waiter holds no slot.
      */
     readonly admission?: ExecAdmission;
+    /**
+     * Start only what the work needs instead of the whole app: the plugin
+     * that declared it (`root`, a `pluginPath`) and the contributed lists it
+     * reads whole (`reads`, debug names). See `resolveStartSet` and the list
+     * rule (`declarePartialStart`): a complete list this set does not wholly
+     * hold throws when read. `label` names the work in that error, `fix`
+     * says how its reader makes a list start whole. Absent: the whole app.
+     */
+    readonly start?: {
+      readonly root: string;
+      readonly reads: readonly string[];
+      readonly label: string;
+      readonly fix: (kind: string) => string;
+    };
   } = {},
 ): Promise<never> {
   declareRuntimeNamespace(namespace);
@@ -166,11 +180,23 @@ export async function runExec(
     // The same answer `serve` declares, off the same registry.
     declareComposedWebPlugins(serverComposition.webPlugins);
     declareComposedHome(serverComposition);
-    ordered = await bootPluginGraph({
-      mode: "exec",
-      // The same graph a serving desktop backend boots: both halves.
-      entries: [...serverEntries, ...machineEntries],
-    });
+    // The same graph a serving desktop backend boots: both halves — whole,
+    // or the part the work needs (`opts.start`), resolved from it with the
+    // build's contributor table (loaded only then: no serving path reads it).
+    const entries = [...serverEntries, ...machineEntries];
+    ordered = await bootPluginGraph(
+      opts.start === undefined
+        ? { mode: "exec", entries }
+        : {
+            mode: "exec",
+            entries,
+            start: {
+              ...opts.start,
+              contributors: (await import("../core/contributors.generated"))
+                .serverContributors,
+            },
+          },
+    );
     await body();
   } catch (err) {
     console.error("[exec] failed", err);

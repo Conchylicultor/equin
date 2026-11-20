@@ -19,6 +19,24 @@ import { promiseWithResolvers } from "@plugins/packages/plugins/floor-compat/cor
 // The derived set the schema layer installs, read at the call site (see the
 // boot comment in `../index.ts`) — by the boot layer and by the deferred
 // contract's run.
+/**
+ * The derived set THIS process's started plugins declare — what a verifier
+ * checks the database against. In a process that started only some plugins
+ * (a job), only theirs (`startedContributions`, `verifySchemaLayer`'s
+ * `partial`); in a whole one, every declaration (`derivedInputs`).
+ */
+export function startedDerivedInputs(): SchemaLayerInputs {
+  return {
+    views: View.startedContributions(),
+    derivedTables: DerivedTable.startedContributions(),
+    // A module-eval registry: it holds what the started modules registered.
+    updatedAtSpecs: registeredDerivedUpdatedAt(),
+    triggers: DbTrigger.startedContributions(),
+    claimedTriggerSets: DbTriggerClaim.startedContributions().map((c) => c.id),
+    stampParts: SchemaStampPart.startedContributions(),
+  };
+}
+
 export function derivedInputs(): SchemaLayerInputs {
   return {
     views: View.getContributions(),
