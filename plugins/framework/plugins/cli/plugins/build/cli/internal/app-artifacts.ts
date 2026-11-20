@@ -894,20 +894,25 @@ export async function fastValidationJobs(opts: {
     // `spawnTypeCheckWorker` is the one place a worker is admitted and takes
     // the grant itself.
     const tree = await readTypeCheckTree(root, program.tsconfigPath);
-    const run = await spawnTypeCheckWorker({
-      root,
-      name: program.name,
-      tsconfigPath: program.tsconfigPath,
-      tree,
-      tscMode: "keyed",
-      // A missed prediction answers from one whole program and is reported,
-      // never a failed build (`type-check`'s `shared/name-run.ts`).
-      onMiss: "whole",
-      // Type-checking only: linting belongs to the check pass this path is
-      // skipping, and an empty list is what the worker reads as "none".
-      lintFiles: [],
-      grant,
-    }).catch((err: unknown) => {
+    const run = await spawnTypeCheckWorker(
+      {
+        root,
+        name: program.name,
+        tsconfigPath: program.tsconfigPath,
+        tree,
+        tscMode: "keyed",
+        // A missed prediction answers from one whole program and is reported,
+        // never a failed build (`type-check`'s `shared/name-run.ts`).
+        onMiss: "whole",
+        // Type-checking only: linting belongs to the check pass this path is
+        // skipping, and an empty list is what the worker reads as "none".
+        lintFiles: [],
+        grant,
+      },
+      // Nothing of this path's own is recorded from the run: it only reads
+      // it, so the spawn's memory record may follow at once.
+      async (r) => r,
+    ).catch((err: unknown) => {
       // A worker the kernel killed (or whose batch it killed) judged
       // nothing: the step ends `killed`, not failed. Any other crash still
       // takes the step down with it.

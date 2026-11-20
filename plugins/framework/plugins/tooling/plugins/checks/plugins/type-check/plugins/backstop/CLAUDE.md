@@ -15,8 +15,15 @@ file.
   never to delete entries.
 - Reproduce by hand with `../../scripts/dual-check.ts` on the trees before and
   after the commit in question.
-- Main only (a scheduled job's default), in a supervised child, admitted like
-  any worker (a background grant, then a worker slot). Not part of any build.
+- Main only (a scheduled job's default), in a supervised child: a background
+  grant of the DUAL weight (`typeCheckWorkerUnits("dual")`, from the measured
+  `TYPE_CHECK_BACKSTOP_PEAK_BYTES` — the oracle is one unbatched whole program,
+  far heavier than a batched worker), then a worker slot. Not part of any
+  build. Its run is recorded in the worker memory log like every worker's
+  (`spawnTypeCheckWorker`), with the oracle's footprint, and
+  `type-check:worker-weight-measured` holds the weight to it. The transcript's
+  `backstop at …` line prints the worker's, the oracle's and the batches'
+  peaks.
 - The child is the `./equin type-check-backstop` command (`cli/`), not a
   `run` body: the backend imports a `run` body to schedule it, and this one
   would put the check runner in the serving backend's closure

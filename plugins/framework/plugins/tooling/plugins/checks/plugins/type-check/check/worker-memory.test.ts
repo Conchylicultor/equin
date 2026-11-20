@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
+  backstopTreePeak,
+  combineVerdicts,
   heavyTreePeak,
+  judgeBackstopWeight,
   judgeWorkerWeight,
   MIN_SAMPLES,
   type WorkerMemoryRecord,
@@ -66,5 +69,76 @@ describe("judgeWorkerWeight", () => {
       expect(r.message).toContain("TYPE_CHECK_WORKER_PEAK_BYTES is");
       expect(r.message).toContain("PER_UNIT_BYTES is");
     }
+  });
+});
+
+describe("backstopTreePeak", () => {
+  const dual: WorkerMemoryRecord = {
+    t: "2026-11-20T16:00:00.000Z",
+    worktree: "main",
+    admission: "heavy",
+    profile: "full",
+    mode: "dual",
+    workerBytes: 2e9,
+    batches: { count: 9, concurrentBytes: 5e9 },
+    fullCheckBytes: 11e9,
+  };
+  test("the larger phase beside the worker: the oracle, or the batches", () => {
+    expect(backstopTreePeak(dual)).toBe(13e9);
+    expect(backstopTreePeak({ ...dual, fullCheckBytes: 1e9 })).toBe(7e9);
+    expect(backstopTreePeak({ ...dual, batches: null })).toBe(13e9);
+  });
+  test("only a dual run with its oracle measured", () => {
+    expect(backstopTreePeak({ ...dual, mode: "keyed" })).toBeNull();
+    const { fullCheckBytes: _, ...noOracle } = dual;
+    expect(backstopTreePeak(noOracle)).toBeNull();
+  });
+  test("a dual run's batched phase still counts toward the worker's weight", () => {
+    expect(heavyTreePeak(dual)).toBe(7e9);
+  });
+});
+
+describe("judgeBackstopWeight", () => {
+  const PEAKS = [12e9, 13e9, 12.5e9, 13.5e9, 12e9];
+  test("agrees within the tolerance", () => {
+    expect(judgeBackstopWeight(PEAKS, 12.6e9)).toEqual({ ok: true });
+  });
+  test("an under-booked backstop fails, naming its constant", () => {
+    const r = judgeBackstopWeight(PEAKS, 7.0e9);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.message).toContain("TYPE_CHECK_BACKSTOP_PEAK_BYTES");
+  });
+  test("too few dual runs is inconclusive", () => {
+    expect(judgeBackstopWeight(PEAKS.slice(0, 2), 12.6e9)).toMatchObject({
+      ok: false,
+      inconclusive: true,
+    });
+  });
+});
+
+describe("combineVerdicts", () => {
+  test("a real failure wins over an inconclusive one", () => {
+    const r = combineVerdicts([
+      { ok: false, inconclusive: true, message: "few" },
+      { ok: false, message: "stale" },
+    ]);
+    expect(r).toEqual({ ok: false, message: "stale" });
+  });
+  test("a judged pass is not hidden by a weight still short of samples", () => {
+    expect(
+      combineVerdicts([
+        { ok: true },
+        { ok: false, inconclusive: true, message: "few" },
+      ]),
+    ).toEqual({ ok: true });
+    expect(combineVerdicts([{ ok: true }, { ok: true }])).toEqual({ ok: true });
+  });
+  test("inconclusive only when no weight could be judged", () => {
+    expect(
+      combineVerdicts([
+        { ok: false, inconclusive: true, message: "a" },
+        { ok: false, inconclusive: true, message: "b" },
+      ]),
+    ).toEqual({ ok: false, inconclusive: true, message: "a\nb" });
   });
 });

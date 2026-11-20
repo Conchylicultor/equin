@@ -1,4 +1,5 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import type { PeakFootprint } from "@plugins/packages/plugins/proc-rusage/core";
 /**
  * The wire contract between a type-check worker process and whoever spawned it.
  *
@@ -367,6 +368,16 @@ export interface TypeCheckWorkerResult {
     full: number;
     lint: number;
   };
+  /**
+   * `dual` mode only: the oracle's own process (`../shared/full-check-process.ts`)
+   * — one fresh whole program, run before the walks — its CPU and its peak
+   * physical footprint. What the backstop's weight is measured on
+   * (`TYPE_CHECK_BACKSTOP_PEAK_BYTES`). Null in every other mode.
+   */
+  fullCheckProcess: {
+    cpuSeconds: number;
+    peakFootprint: PeakFootprint;
+  } | null;
   /**
    * The batch processes this run spawned (a set larger than `job.batch`'s `k`):
    * their CPU (type check and lint — already inside the

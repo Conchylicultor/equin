@@ -18,8 +18,8 @@ import type { ForegroundSlot } from "@plugins/infra/plugins/host/plugins/host-ad
 import {
   TYPE_CHECK_LIGHT_SOURCES,
   NO_TYPED_PARTS,
-  TYPE_CHECK_WORKER_UNITS,
   TYPE_CHECK_FULL_PROFILE,
+  typeCheckWorkerUnits,
   typeCheckProfileFor,
   type TypeCheckMemoryProfile,
   type TypeCheckTree,
@@ -39,6 +39,8 @@ import {
   launchTypeCheckWorker,
   type TypeCheckWorkerRequest,
 } from "../../shared/launch";
+import { recordWorkerMemory } from "../../shared/worker-memory-log";
+import { checkoutWorktreeName } from "@plugins/infra/plugins/paths/core";
 import { reportMisses, type MissReportSink } from "./miss-reports";
 import { typeCheckLightPool, typeCheckWorkerPool } from "./worker-pool";
 
@@ -145,9 +147,17 @@ function heavyFromTheStart(
 }
 
 /**
- * Run the worker to completion. Throws when the worker itself crashed
- * (nonzero exit) — tsc diagnostics are a clean exit with a non-empty
- * `tscErrors`, never an exit code.
+ * Run the worker to completion and hand the run to `consume` — the caller's own
+ * reading and recording of it — then append the run's memory to the host log
+ * (`recordRun`). Throws when the worker itself crashed (nonzero exit) — tsc
+ * diagnostics are a clean exit with a non-empty `tscErrors`, never an exit
+ * code.
+ *
+ * Why a callback: the memory record is this function's, so no caller can
+ * spawn a worker whose run goes unrecorded (the backstop's never were); and
+ * it is written AFTER `consume` settles, so an append that fails can never cost a
+ * caller what it does with the run (the check's lint results and bases, the
+ * backstop's divergence reports) — it fails loudly once they are done.
  *
  * Admission, in this order:
  * 1. a host-wide slot in the grant's lane — the memory bound the CPU grant
@@ -161,7 +171,8 @@ function heavyFromTheStart(
  *    `TYPE_CHECK_BATCH_FILES`. The two slots are taken one after the other,
  *    never one inside the other. Before the split, a 4-s run waited up to
  *    16 min behind whole-tree runs on the heavy pool's one background slot;
- * 2. `TYPE_CHECK_WORKER_UNITS` of the holder's grant — the CPU share. A set
+ * 2. `typeCheckWorkerUnits(tscMode)` of the holder's grant — the CPU share
+ *    (a dual run weighs its whole-program oracle, `TYPE_CHECK_BACKSTOP_UNITS`). A set
  *    larger than `TYPE_CHECK_BATCH_FILES` is checked in batch processes the
  *    worker runs one at a time, inside the same share
  *    (research/2026-10-23-global-type-check-bounded-batches.md).
@@ -172,7 +183,8 @@ function heavyFromTheStart(
  * and nothing here can spawn it demoted. Nothing here reads the branch — a push
  * checks an agent branch and is interactive.
  */
-export async function spawnTypeCheckWorker(opts: {
+export async function spawnTypeCheckWorker<T>(
+  opts: {
   root: AppPath;
   name: string;
   tsconfigPath: string;
@@ -205,7 +217,9 @@ export async function spawnTypeCheckWorker(opts: {
    */
   batch?: TypeCheckWorkerJob["batch"];
   grant: Grant;
-}): Promise<TypeCheckWorkerRun> {
+  },
+  consume: (run: TypeCheckWorkerRun) => Promise<T>,
+): Promise<T> {
   const { root, name, tsconfigPath, tscMode, onMiss, lintFiles, tree, grant } =
     opts;
   const typedParts = opts.typedParts ?? NO_TYPED_PARTS;
@@ -257,7 +271,8 @@ export async function spawnTypeCheckWorker(opts: {
               profile,
             };
           },
-          { units: TYPE_CHECK_WORKER_UNITS },
+          // A dual run weighs its whole-program oracle, not a batched run.
+          { units: typeCheckWorkerUnits(tscMode) },
         );
       },
       { lane: grant.lane },
@@ -316,7 +331,63 @@ export async function spawnTypeCheckWorker(opts: {
   run.result.tscLines.push(
     ...(await reportMisses(run.result.missed, outboxSink(root))),
   );
-  return run;
+  let used: { ok: true; value: T } | { ok: false; error: unknown };
+  try {
+    used = { ok: true, value: await consume(run) };
+  } catch (error) {
+    used = { ok: false, error };
+  }
+  // Recorded whatever `consume` did: the run happened and was measured either
+  // way. When both fail, both errors are thrown.
+  try {
+    await recordRun(root, tscMode, run);
+  } catch (recordError) {
+    if (used.ok) throw recordError;
+    throw new AggregateError(
+      [used.error, recordError],
+      `type-check worker for "${name}": the caller's use of the run failed, and so did recording its memory`,
+    );
+  }
+  if (!used.ok) throw used.error;
+  return used.value;
+}
+
+/**
+ * The run's memory, as a host record: what the worker's and the backstop's
+ * grant weights and host admission's RAM quantum are judged against
+ * (`type-check:worker-weight-measured`). Here, where every worker starts, so
+ * no caller's runs are missing from it. A run with any part unmeasured
+ * records nothing: a partial peak would read as a small one. A failed append
+ * throws: the run's verdict was not lost, but the measurement would be.
+ */
+async function recordRun(
+  root: string,
+  mode: TypeCheckWorkerJob["tscMode"],
+  run: TypeCheckWorkerRun,
+): Promise<void> {
+  const batches = run.result.batchProcesses;
+  const oracle = run.result.fullCheckProcess;
+  if (run.peakFootprint.kind !== "measured") return;
+  if (batches !== null && batches.unmeasured > 0) return;
+  if (oracle !== null && oracle.peakFootprint.kind !== "measured") return;
+  await recordWorkerMemory({
+    t: new Date().toISOString(),
+    worktree: checkoutWorktreeName(root),
+    admission: run.admission.kind,
+    profile: run.profile.kind,
+    mode,
+    workerBytes: run.peakFootprint.bytes,
+    batches:
+      batches === null
+        ? null
+        : {
+            count: batches.count,
+            concurrentBytes: batches.concurrentFootprintBytes,
+          },
+    ...(oracle !== null && oracle.peakFootprint.kind === "measured"
+      ? { fullCheckBytes: oracle.peakFootprint.bytes }
+      : {}),
+  });
 }
 
 async function spawnWorker(opts: {

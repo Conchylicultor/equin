@@ -10,6 +10,7 @@
 
 import { PER_UNIT_BYTES } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { HEAVY_PROCESS_RAM_BYTES } from "@plugins/packages/plugins/heap-pacing/core";
+import type { TscMode } from "./worker-protocol";
 
 /**
  * One heavy worker's peak PHYSICAL FOOTPRINT: the worker process's own peak
@@ -27,7 +28,7 @@ import { HEAVY_PROCESS_RAM_BYTES } from "@plugins/packages/plugins/heap-pacing/c
  * tail headroom (research/2026-09-18-global-type-check-one-program.md).
  *
  * Every run since appends its measurement to the host's worker memory log
- * (`../check/worker-memory.ts`), and `type-check:worker-weight-measured`
+ * (`../shared/worker-memory-log.ts`, written by `spawnTypeCheckWorker`), and `type-check:worker-weight-measured`
  * (main's hourly host audit) fails when this value sits more than 20 % from
  * the last 14 days' mean, or the mean is another number of units — so it is
  * held to the record, not re-read by hand.
@@ -56,6 +57,55 @@ export const TYPE_CHECK_WORKER_PEAK_BYTES = 7.0e9;
 export const TYPE_CHECK_WORKER_UNITS = Math.ceil(
   TYPE_CHECK_WORKER_PEAK_BYTES / PER_UNIT_BYTES,
 );
+
+/**
+ * The type-check BACKSTOP's peak physical footprint: a `dual` run
+ * (`plugins/backstop`), the worker whose oracle is one fresh whole program
+ * over every root (`../shared/full-check-process.ts`). The oracle is never
+ * batched — a whole program is what makes it the cold ground truth — so it is
+ * the largest thing the type check builds, and no K bounds it.
+ *
+ * It ran inside the worker, stacked on what the worker held of its walks,
+ * admitted at the worker's weight (2 units): the holder-peak ledger read its
+ * process tree at 14.9–21.3 GB on each of six nights (2026-11-14..19), and
+ * `sample` read the worker at 16.8 GB peak footprint with the host swapping
+ * (2026-11-20). Now the oracle has a process of its own, run before the walks,
+ * so the tree peak is the larger phase, not the sum.
+ *
+ * MEASURED 2026-11-20, the oracle alone (cold, heap paced at 4 GB, 18,280
+ * sources), n = 3: 16.8, 16.1 and 15.7 GB peak footprint, 238–338 CPU-s.
+ * Split by phase: `createProgram` 3.4 GB (2.4 GB live heap), the semantic
+ * check of every file 15.0 GB (10.5 GB live: the checker's types for the
+ * whole repo at once), the per-file `.d.ts` emit a transient +1 GB. So the
+ * cost IS the whole program — what makes the oracle the oracle — not
+ * anything held beside it, and K cannot bound it. In the real dual run the
+ * worker's own peak was 1.8 GB (its walks, after the oracle) and its batches
+ * 5.2 GB at once. The weight is the record's definition of a dual run's tree
+ * (`backstopTreePeak`: worker + oracle, an upper bound): 16.2 GB oracle mean
+ * + 1.8 GB worker = 18.0 GB, 5 units of 3.6 GB.
+ *
+ * Every dual run appends its measurement (`fullCheckBytes`) to the worker
+ * memory log, and `type-check:worker-weight-measured` holds this value to the
+ * last 14 days' mean, as it holds the worker's.
+ */
+export const TYPE_CHECK_BACKSTOP_PEAK_BYTES = 18.0e9;
+
+/**
+ * The grant units a dual run spends: its peak in the host's quantum, rounded
+ * up — derived, like `TYPE_CHECK_WORKER_UNITS`.
+ */
+export const TYPE_CHECK_BACKSTOP_UNITS = Math.ceil(
+  TYPE_CHECK_BACKSTOP_PEAK_BYTES / PER_UNIT_BYTES,
+);
+
+/**
+ * The units a worker of `mode` weighs: a `dual` run carries its whole-program
+ * oracle, every other mode only batched programs. The one place a spawner
+ * reads its weight from, so a mode cannot be admitted at another's.
+ */
+export function typeCheckWorkerUnits(mode: TscMode): number {
+  return mode === "dual" ? TYPE_CHECK_BACKSTOP_UNITS : TYPE_CHECK_WORKER_UNITS;
+}
 
 /**
  * K: the most source files one program holds. A set larger than this — a cold

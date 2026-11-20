@@ -42,7 +42,8 @@ import {
 } from "../core";
 import type { NameResult, NameRunOutput } from "./name-run";
 import { signatureEmitOptions } from "./emit-options";
-import { compareResults, fullCheck } from "./full-check";
+import { compareResults } from "./full-check";
+import { runFullCheckProcess, type FullCheckRun } from "./full-check-process";
 import {
   OverBudget,
   refuseBatches,
@@ -486,6 +487,7 @@ async function run(job: Job): Promise<Result> {
       checked: [],
       missed: [],
       phaseCpuSeconds: { check: cpuSeconds() - cpuStart, full: 0, lint: 0 },
+      fullCheckProcess: null,
       batchProcesses: null,
       stats: empty,
     };
@@ -503,6 +505,18 @@ async function run(job: Job): Promise<Result> {
       "type-check: declaration inputs are never checked, which is only sound under skipLibCheck",
     );
   }
+
+  // 3a. Dual: the oracle FIRST, in a process of its own
+  //     (`./full-check-process.ts`) — a fresh whole program is the largest
+  //     thing a run builds, and run now nothing of the walks below is alive
+  //     beside it, in this process or in a batch.
+  const oracle: FullCheckRun | undefined =
+    job.tscMode === "dual"
+      ? await runFullCheckProcess(
+          { root: job.root, tree: job.tree, options, roots },
+          job.scratch,
+        )
+      : undefined;
 
   // 2. The two programs, with typed lint inside them — walking from the
   //    walk base (`./walk-base.ts`) when there is one.
@@ -628,12 +642,11 @@ async function run(job: Job): Promise<Result> {
   ].join("\n");
   const cpuCheck = cpuSeconds();
 
-  // 3. Dual: a full check of a FRESH whole program — the cold ground truth —
-  //    compared file by file. Its verdict stands; on any divergence a cold
-  //    run overwrites the store (`./full-check.ts`).
-  if (job.tscMode === "dual") {
-    // No `beforeProgram` here: `dual` ran it before the full walk above.
-    const full = fullCheck(view, options, roots);
+  // 3b. Dual: the full check of a FRESH whole program (run first, above) —
+  //     the cold ground truth — compared file by file. Its verdict stands;
+  //     on any divergence a cold run overwrites the store (`./full-check.ts`).
+  if (oracle !== undefined) {
+    const { full } = oracle;
     const keyed = new Map<string, NameResult>(
       [...out.walk.all()].map(([p, f]) => [
         p,
@@ -643,7 +656,7 @@ async function run(job: Job): Promise<Result> {
     const against = compareResults(keyed, full.results);
     divergences.push(...against);
     tscLines.push(
-      `type-check: dual: ${against.length} of ${full.results.size} files diverge from the full check`,
+      `type-check: dual: ${against.length} of ${full.results.size} files diverge from the full check (its process: cpu ${oracle.cpuSeconds.toFixed(1)}s, peak footprint ${oracle.peakFootprint.kind === "measured" ? gb(oracle.peakFootprint.bytes) : `unmeasured (${oracle.peakFootprint.why})`})`,
     );
     tscErrors = [
       ...configDiagnostics,
@@ -726,9 +739,18 @@ async function run(job: Job): Promise<Result> {
     missed: out.report.missed,
     phaseCpuSeconds: {
       check: cpuCheck - cpuStart - (lintCpu - (cpuEnd - cpuFull)),
-      full: cpuFull - cpuCheck,
+      // The oracle's process, and what this one did after it (the compare,
+      // a cold rewrite, the walk base).
+      full: (oracle?.cpuSeconds ?? 0) + cpuFull - cpuCheck,
       lint: lintCpu,
     },
+    fullCheckProcess:
+      oracle === undefined
+        ? null
+        : {
+            cpuSeconds: oracle.cpuSeconds,
+            peakFootprint: oracle.peakFootprint,
+          },
     batchProcesses:
       spend.count === 0
         ? null
@@ -737,9 +759,19 @@ async function run(job: Job): Promise<Result> {
             cpuSeconds: spend.cpuSeconds,
             peakFootprintBytes: spend.peakFootprintBytes,
             unmeasured: spend.unmeasured,
+            // Over EVERY walk that batched: a dual / walks run's full walk
+            // and a cold rewrite batch too, and a warm incremental walk may
+            // batch nothing — read from it alone, the run's batches read as 0.
             concurrentFootprintBytes: Math.max(
-              r.p1Batches?.concurrentFootprintBytes ?? 0,
-              r.p2Batches?.concurrentFootprintBytes ?? 0,
+              0,
+              ...[out, fullWalk, written].flatMap((w) =>
+                w === undefined
+                  ? []
+                  : [
+                      w.report.p1Batches?.concurrentFootprintBytes ?? 0,
+                      w.report.p2Batches?.concurrentFootprintBytes ?? 0,
+                    ],
+              ),
             ),
           },
     stats: {

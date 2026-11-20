@@ -259,6 +259,7 @@ as the only escape. Being importable from every runtime *is* the feature.
     - `framework/cli/op-runtime`
     - `framework/cli/start`
     - `framework/tooling/checks`
+    - `framework/tooling/checks/type-check`
     - `infra/host/host-admission`
     - `packages/signal-origin/sink`
     - `primitives/log-channels`

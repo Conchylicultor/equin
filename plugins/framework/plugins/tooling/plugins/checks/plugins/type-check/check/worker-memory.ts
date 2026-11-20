@@ -11,9 +11,7 @@
 // (`type-check:worker-weight-measured`, run hourly by main's host audit) fails
 // when the constants no longer agree with the last two weeks of runs.
 
-import { z } from "zod";
 import {
-  defineFileSink,
   readHistory,
   statHistory,
 } from "@plugins/infra/plugins/file-sink/core";
@@ -23,54 +21,20 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { TYPE_CHECK_WORKER_PEAK_BYTES, TYPE_CHECK_WORKER_UNITS } from "../core";
-import { workerMemoryLogDir } from "../data-dirs";
+import {
+  TYPE_CHECK_BACKSTOP_PEAK_BYTES,
+  TYPE_CHECK_BACKSTOP_UNITS,
+  TYPE_CHECK_WORKER_PEAK_BYTES,
+  TYPE_CHECK_WORKER_UNITS,
+} from "../core";
+import {
+  WORKER_MEMORY_FILE as MEMORY_FILE,
+  WORKER_MEMORY_MAX_LINES as MAX_LINES,
+  WorkerMemoryRecordSchema,
+  type WorkerMemoryRecord,
+} from "../shared/worker-memory-log";
 
-const MEMORY_FILE = workerMemoryLogDir.file("worker-memory.jsonl");
-const KEEP = 2;
-
-// ~200 bytes a line: 2 MB × 3 files holds ~30k runs, weeks of this host's.
-const MAX_LINES = 50_000;
-const memorySink = defineFileSink({
-  id: "type-check-worker-memory",
-  description:
-    "One JSONL line per type-check worker run on this host: how it was admitted, the worker's peak physical footprint and its batch processes' — what the worker's grant weight and host admission's RAM quantum are checked against.",
-  path: MEMORY_FILE,
-  maxBytes: 2 * 1024 * 1024,
-  keep: KEEP,
-});
-
-export const WorkerMemoryRecordSchema = z.object({
-  /** When the run ended (ISO). */
-  t: z.string(),
-  worktree: z.string(),
-  /** Which pool admitted it: `type-check-light`, or `type-check-worker` (heavy / escalated). */
-  admission: z.enum(["light", "heavy", "escalated"]),
-  /**
-   * The memory profile the worker ran (`typeCheckProfileFor`). Absent on a
-   * record written before profiles existed: every such run was `full`.
-   */
-  profile: z.enum(["full", "one-unit"]).optional(),
-  /** The worker process's own peak physical footprint. */
-  workerBytes: z.number().nonnegative(),
-  /** Its batch processes, when it ran any: how many, and the upper bound on their peaks alive at once. */
-  batches: z
-    .object({
-      count: z.number().int().positive(),
-      concurrentBytes: z.number().nonnegative(),
-    })
-    .nullable(),
-});
-export type WorkerMemoryRecord = z.infer<typeof WorkerMemoryRecordSchema>;
-
-/** Append one run's measurement. */
-export async function recordWorkerMemory(
-  record: WorkerMemoryRecord,
-): Promise<void> {
-  await memorySink.append(
-    JSON.stringify(WorkerMemoryRecordSchema.parse(record)),
-  );
-}
+export type { WorkerMemoryRecord };
 
 /**
  * A run's tree peak, as the weight is defined: the worker's own peak plus its
@@ -88,6 +52,21 @@ export function heavyTreePeak(r: WorkerMemoryRecord): number | null {
   return r.workerBytes + r.batches.concurrentBytes;
 }
 
+/**
+ * A dual run's tree peak, as the backstop's weight is defined: the larger of
+ * its two phases — the oracle process beside the worker (spawned first, while
+ * the worker holds nothing of its walks; the worker's own LIFETIME peak is
+ * added all the same, so an upper bound), and the worker beside its batches.
+ * Null for any run that is not a dual one with its oracle measured.
+ */
+export function backstopTreePeak(r: WorkerMemoryRecord): number | null {
+  if (r.mode !== "dual" || r.fullCheckBytes === undefined) return null;
+  return Math.max(
+    r.workerBytes + r.fullCheckBytes,
+    r.workerBytes + (r.batches?.concurrentBytes ?? 0),
+  );
+}
+
 /** How far a declared constant may sit from the measured mean before it is stale. */
 export const WEIGHT_TOLERANCE = 0.2;
 /** Fewer heavy runs than this in the window cannot judge a mean. */
@@ -101,25 +80,45 @@ export interface WeightConstants {
   perUnitBytes: number;
 }
 
-/** The verdict on the constants, given the heavy runs' tree peaks. Pure. */
-export function judgeWorkerWeight(
+/** The measured peaks summarized, or the inconclusive verdict when too few. */
+function summarize(
   peaks: readonly number[],
-  c: WeightConstants,
-): CheckResult {
+  what: string,
+): { mean: number; measured: string } | CheckResult {
   if (peaks.length < MIN_SAMPLES) {
     return {
       ok: false,
       inconclusive: true,
-      message: `only ${peaks.length} heavy batched type-check runs recorded in the last 14 days (${MEMORY_FILE}); ${MIN_SAMPLES} are needed to judge the worker's weight.`,
+      message: `only ${peaks.length} ${what} recorded in the last 14 days (${MEMORY_FILE}); ${MIN_SAMPLES} are needed to judge the weight.`,
     };
   }
   const sorted = [...peaks].sort((a, b) => a - b);
   const mean = sorted.reduce((s, p) => s + p, 0) / sorted.length;
   const p50 = sorted[Math.floor(sorted.length / 2)]!;
   const max = sorted.at(-1)!;
-  const measured = `${sorted.length} heavy batched runs: tree peak (worker + batches at once) mean ${formatBytes(mean)}, p50 ${formatBytes(p50)}, max ${formatBytes(max)}`;
-  const off = (declared: number, actual: number) =>
-    Math.abs(actual - declared) > WEIGHT_TOLERANCE * declared;
+  return {
+    mean,
+    measured: `${sorted.length} ${what}: tree peak mean ${formatBytes(mean)}, p50 ${formatBytes(p50)}, max ${formatBytes(max)}`,
+  };
+}
+
+const off = (declared: number, actual: number) =>
+  Math.abs(actual - declared) > WEIGHT_TOLERANCE * declared;
+
+const HINT =
+  "Re-derive the named constant from these records (type-check core/worker-weight.ts, host-admission core/internal/budget.ts) and say where it came from beside it; never move it by a guessed offset. A moved PER_UNIT_BYTES resizes B: recompute its interval (budget.ts).";
+
+/** The verdict on the worker's constants, given the heavy runs' tree peaks. Pure. */
+export function judgeWorkerWeight(
+  peaks: readonly number[],
+  c: WeightConstants,
+): CheckResult {
+  const sum = summarize(
+    peaks,
+    "heavy batched type-check runs (worker + batches at once)",
+  );
+  if (!("mean" in sum)) return sum;
+  const { mean, measured } = sum;
   const problems: string[] = [];
   // The units follow from the declared peak (`TYPE_CHECK_WORKER_UNITS` is
   // derived from it), so the two statements below are each fixable on their
@@ -140,12 +139,37 @@ export function judgeWorkerWeight(
   return {
     ok: false,
     message: `${problems.join("; ")} — ${measured}.`,
-    hint: "Re-derive the named constant from these records (type-check core/worker-weight.ts, host-admission core/internal/budget.ts) and say where it came from beside it; never move it by a guessed offset. A moved PER_UNIT_BYTES resizes B: recompute its interval (budget.ts).",
+    hint: HINT,
   };
 }
 
-/** The heavy runs' tree peaks recorded since `sinceMs`. */
-export async function readHeavyTreePeaks(sinceMs: number): Promise<number[]> {
+/**
+ * The verdict on the backstop's declared peak, given the dual runs' tree
+ * peaks. Pure. Its units are derived from the peak and the quantum, so only
+ * the peak is judged here: the quantum is the fleet's, calibrated on the
+ * worker above.
+ */
+export function judgeBackstopWeight(
+  peaks: readonly number[],
+  peakBytes: number,
+): CheckResult {
+  const sum = summarize(
+    peaks,
+    "dual (backstop) type-check runs (larger of oracle or batches, beside the worker)",
+  );
+  if (!("mean" in sum)) return sum;
+  if (!off(peakBytes, sum.mean)) return { ok: true };
+  return {
+    ok: false,
+    message: `TYPE_CHECK_BACKSTOP_PEAK_BYTES is ${formatBytes(peakBytes)}, more than ${WEIGHT_TOLERANCE * 100} % from the measured mean — ${sum.measured}.`,
+    hint: HINT,
+  };
+}
+
+/** Every run recorded since `sinceMs`. */
+export async function readWorkerMemory(
+  sinceMs: number,
+): Promise<WorkerMemoryRecord[]> {
   // The rotated history read as one ordered whole (file-sink's own reader,
   // which follows a rotation that lands mid-read by birth time).
   const lines = await readHistory(MEMORY_FILE, {
@@ -153,21 +177,47 @@ export async function readHeavyTreePeaks(sinceMs: number): Promise<number[]> {
     notBefore: null,
     limit: MAX_LINES,
   });
-  const peaks: number[] = [];
+  const out: WorkerMemoryRecord[] = [];
   for (const { text } of lines) {
     // A malformed line is a writer bug: parse throws, loudly.
     const r = WorkerMemoryRecordSchema.parse(JSON.parse(text));
-    if (Date.parse(r.t) < sinceMs) continue;
-    const peak = heavyTreePeak(r);
-    if (peak !== null) peaks.push(peak);
+    if (Date.parse(r.t) >= sinceMs) out.push(r);
   }
-  return peaks;
+  return out;
+}
+
+const peaksOf = (
+  records: readonly WorkerMemoryRecord[],
+  peakOf: (r: WorkerMemoryRecord) => number | null,
+): number[] => records.map(peakOf).filter((p): p is number => p !== null);
+
+/**
+ * The weights' verdicts as one: any real failure fails (all of them named);
+ * otherwise a weight judged ok passes the check even while another is still
+ * short of samples (the backstop's, for its first days: it runs once a day);
+ * inconclusive only when no weight could be judged at all.
+ */
+export function combineVerdicts(verdicts: readonly CheckResult[]): CheckResult {
+  const notOk = verdicts.filter(
+    (v): v is Extract<CheckResult, { ok: false }> => !v.ok,
+  );
+  const failed = notOk.filter((v) => !v.inconclusive);
+  const pick =
+    failed.length > 0 ? failed : verdicts.some((v) => v.ok) ? [] : notOk;
+  if (pick.length === 0) return { ok: true };
+  const hint = pick.find((v) => v.hint !== undefined)?.hint;
+  return {
+    ok: false,
+    ...(failed.length === 0 ? { inconclusive: true as const } : {}),
+    message: pick.map((v) => v.message).join("\n"),
+    ...(hint !== undefined ? { hint } : {}),
+  };
 }
 
 export const workerWeightCheck: Check = {
   id: "type-check:worker-weight-measured",
   description:
-    "The type-check worker's declared peak (TYPE_CHECK_WORKER_PEAK_BYTES) and host admission's RAM quantum per unit it spends (PER_UNIT_BYTES) each agree within 20 % with the last 14 days of heavy runs' measured footprints on this host.",
+    "The type-check worker's declared peak (TYPE_CHECK_WORKER_PEAK_BYTES), host admission's RAM quantum per unit it spends (PER_UNIT_BYTES) and the backstop's declared peak (TYPE_CHECK_BACKSTOP_PEAK_BYTES) each agree within 20 % with the last 14 days of measured footprints on this host.",
   // About this machine's record of runs, not the tree: every checkout's runs
   // land in the one host log.
   scope: "host",
@@ -182,13 +232,22 @@ export const workerWeightCheck: Check = {
       `day:${day}`,
       `peak:${TYPE_CHECK_WORKER_PEAK_BYTES}`,
       `units:${TYPE_CHECK_WORKER_UNITS}`,
+      `backstop:${TYPE_CHECK_BACKSTOP_PEAK_BYTES}:${TYPE_CHECK_BACKSTOP_UNITS}`,
       `unit:${PER_UNIT_BYTES}`,
     ].join("\n");
   },
-  run: async () =>
-    judgeWorkerWeight(await readHeavyTreePeaks(Date.now() - WINDOW_MS), {
-      peakBytes: TYPE_CHECK_WORKER_PEAK_BYTES,
-      units: TYPE_CHECK_WORKER_UNITS,
-      perUnitBytes: PER_UNIT_BYTES,
-    }),
+  run: async () => {
+    const records = await readWorkerMemory(Date.now() - WINDOW_MS);
+    return combineVerdicts([
+      judgeWorkerWeight(peaksOf(records, heavyTreePeak), {
+        peakBytes: TYPE_CHECK_WORKER_PEAK_BYTES,
+        units: TYPE_CHECK_WORKER_UNITS,
+        perUnitBytes: PER_UNIT_BYTES,
+      }),
+      judgeBackstopWeight(
+        peaksOf(records, backstopTreePeak),
+        TYPE_CHECK_BACKSTOP_PEAK_BYTES,
+      ),
+    ]);
+  },
 };

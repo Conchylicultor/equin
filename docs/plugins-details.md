@@ -33303,7 +33303,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling` (1 debt)
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (14 debt)
-              - `framework/tooling/checks/type-check` (16 debt)
+              - `framework/tooling/checks/type-check` (18 debt)
               - `framework/tooling/codegen` (19 debt)
               - `framework/tooling/codegen/composition-registries` (1 debt)
               - `framework/tooling/collected-dir/discovery` (1 debt)
@@ -33734,6 +33734,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `LINT_GROUP_ALL`
                   - `LINT_GROUP_BASE`
                   - `NO_TYPED_PARTS`
+                  - `TYPE_CHECK_BACKSTOP_PEAK_BYTES`
+                  - `TYPE_CHECK_BACKSTOP_UNITS`
                   - `TYPE_CHECK_BATCH_FILES`
                   - `TYPE_CHECK_DIVERGENCE_KIND`
                   - `TYPE_CHECK_FULL_PROFILE`
@@ -33743,15 +33745,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `TYPE_CHECK_WORKER_UNITS`
                   - `TypeCheckDivergencePayloadSchema`
                   - `typeCheckProfileFor`
+                  - `typeCheckWorkerUnits`
               - Cross-plugin:
                 - Imported by:
                   - `framework/cli/build`
                   - `framework/tooling/checks/type-check/backstop`
               - Exemptions:
                 - Exempts itself from:
-                  - `boundaries/no-platform-api` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/launch.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
-                  - `user-path/no-unproven-claim` — `shared/batch-worker.ts` (sanctioned)
-                  - `blocking-fs/sync-named` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/name-store.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (sanctioned)
+                  - `boundaries/no-platform-api` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/full-check-process.ts`, `shared/full-check-worker.ts`, `shared/keys.ts`, `shared/launch.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+                  - `user-path/no-unproven-claim` — `shared/batch-worker.ts`, `shared/full-check-worker.ts` (sanctioned)
+                  - `blocking-fs/sync-named` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check-process.ts`, `shared/full-check-worker.ts`, `shared/name-store.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (sanctioned)
               - Cli:
                 - Exports (values): `readTypeCheckTree`
               - Plugins:
@@ -37702,6 +37705,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/op-runtime`
           - `framework/cli/start`
           - `framework/tooling/checks`
+          - `framework/tooling/checks/type-check`
           - `infra/host/host-admission`
           - `packages/signal-origin/sink`
           - `primitives/log-channels`
@@ -44810,6 +44814,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/bootstrap`
           - `framework/cli/build`
           - `framework/cli/op-runtime`
+          - `framework/tooling/checks/type-check/backstop`
           - `infra/spawn`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts`, `core/internal/proc-linux.ts`, `core/internal/peak-footprint.ts` (debt)

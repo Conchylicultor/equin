@@ -240,6 +240,9 @@ const NOT_ENGINE = new Set([
   "launch.ts",
   "worker.ts",
   "full-check.ts",
+  "full-check-process.ts",
+  "full-check-worker.ts",
+  "worker-memory-log.ts",
   "batch-processes.ts",
   "batch-worker.ts",
 ]);

@@ -51,8 +51,7 @@ import {
   type DarwinBackground,
 } from "@plugins/packages/plugins/spawn-priority/server";
 import { recordOuterReadSet } from "./outer-read-set";
-import { recordWorkerMemory, workerWeightCheck } from "./worker-memory";
-import { checkoutWorktreeName } from "@plugins/infra/plugins/paths/core";
+import { workerWeightCheck } from "./worker-memory";
 import { openPrepareThread } from "./prepare-thread";
 import type { ProgramOutcome } from "./prepare";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -81,8 +80,10 @@ async function runWorker(
     "lintFiles" | "typedParts" | "lintBase" | "walkBase" | "tree"
   >,
   grant: Grant,
-): Promise<WorkerResult> {
-  const run = await spawnTypeCheckWorker({
+  consume: (result: WorkerResult) => Promise<void>,
+): Promise<void> {
+  await spawnTypeCheckWorker(
+    {
     root,
     name: program.name,
     tsconfigPath: program.tsconfigPath,
@@ -104,17 +105,19 @@ async function runWorker(
     // file the same way.
     tree: lint.tree,
     grant,
-  });
-  return {
-    ...run.result,
-    peakFootprint: run.peakFootprint,
-    cpuTimeMicros: run.cpuTimeMicros,
-    cpuSystemMicros: run.cpuSystemMicros,
-    wallMs: run.wallMs,
-    slotWaitMs: run.slotWaitMs,
-    admission: run.admission,
-    profile: run.profile,
-  };
+    },
+    (run) =>
+      consume({
+        ...run.result,
+        peakFootprint: run.peakFootprint,
+        cpuTimeMicros: run.cpuTimeMicros,
+        cpuSystemMicros: run.cpuSystemMicros,
+        wallMs: run.wallMs,
+        slotWaitMs: run.slotWaitMs,
+        admission: run.admission,
+        profile: run.profile,
+      }),
+  );
 }
 
 // Which pool the worker was admitted through (one line per run), e.g.
@@ -317,6 +320,87 @@ const check: Check = {
 
       const { program } = plan;
 
+      // What a run's result is read for: its cost lines and the record
+      // phase. Run inside the spawn's `consume` for a returned worker, else with
+      // no result once the worker crashed.
+      let recorded = false;
+      const recordPhase = async (
+        result: WorkerResult | undefined,
+      ): Promise<void> => {
+        recorded = true;
+        // Peak footprint and CPU of the worker, when one ran. Emitted through the
+        // runner's `ctx.log` observation seam, so the measurement is DURABLE
+        // (check-<id>.log + the build's checks section) — a terminal-only write
+        // would evaporate, and calibrating both host-admission's RAM quantum and
+        // this check's own weight is exactly an after-the-fact grep over many
+        // runs. Purely an observation: a missing rusage, or a crashed worker
+        // (which threw before it could be measured), changes nothing about the
+        // verdict below.
+        const costLine = workerCostLine(
+          `type-check worker ${program.name}`,
+          result?.peakFootprint,
+          result?.cpuTimeMicros,
+          result?.cpuSystemMicros,
+          result?.wallMs,
+          result?.slotWaitMs,
+        );
+        if (costLine !== null) ctx.log?.(costLine, "stderr");
+        if (result) {
+          ctx.log?.(
+            `${admissionLine(`type-check worker ${program.name}`, result.admission)}; memory profile ${result.profile.kind} (K ${result.profile.batchFiles} unless the run chose its own batching, heap paced at ${formatBytes(result.profile.heapRamBytes)} unless the environment set a pace)`,
+            "stderr",
+          );
+        }
+        // Where that CPU went, phase by phase (in the worker's own clock, so it
+        // excludes process start-up): the type check (the walk, both programs'
+        // build and check) and lint — then what each program held and checked.
+        if (result) {
+          const { check, lint } = result.phaseCpuSeconds;
+          const b = result.batchProcesses;
+          ctx.log?.(
+            `type-check worker ${program.name} phases: type check ${check.toFixed(1)}s, lint ${lint.toFixed(1)}s (cpu)` +
+              // The batch processes' share of the cost line's cpu (a reaped
+              // child counts in its parent's rusage) and their memory.
+              (b === null
+                ? ""
+                : `; ${b.count} batch processes: cpu ${b.cpuSeconds.toFixed(1)}s (type check and lint), peak footprint ${formatBytes(b.peakFootprintBytes)} each, ≤ ${formatBytes(b.concurrentFootprintBytes)} at once${b.unmeasured > 0 ? ` (${b.unmeasured} unmeasured)` : ""}`),
+            "stderr",
+          );
+          ctx.log?.(
+            programsLine(`type-check worker ${program.name}`, result.stats),
+            "stderr",
+          );
+          for (const line of result.tscLines) ctx.log?.(line, "stderr");
+        }
+
+        // The record phase, on the thread that holds the session: the per-file
+        // lint results and the lint verdict (see `./prepare`). The outcome is
+        // handed over only when the worker RETURNED — a crashed run records
+        // nothing new. The lint verdict comes back from there, not from the
+        // worker: most files' results are in the store, and exemptions apply at
+        // read time.
+        const outcome: ProgramOutcome | undefined = result && {
+          tscClean: !result.tscErrors,
+          lint: result.lint,
+          keys: result.lintKeys,
+          walkRoot: result.walkRoot,
+        };
+        const finalizeStart = performance.now();
+        const finalized = await thread.finalize(outcome);
+        lintLines = finalized.lintViolations ?? "";
+        // What the worker linted, and why — after the worker, because only it
+        // can tell which typed parts were stale.
+        ctx.log?.(finalized.lintLine, "stderr");
+        // What used to be a freeze of the runner's thread, still measured: the
+        // instrument for making the preparation itself cheaper — and which run
+        // base it carried from, how much that left to send, and what the record
+        // phase wrote back.
+        ctx.log?.(
+          `type-check: prepared off-thread in ${seconds(prepareMs)}s (${plan.phaseMs.map(([n, ms]) => `${n} ${seconds(ms)}s`).join(", ")}; ${plan.baseLine}; finalize ${seconds(performance.now() - finalizeStart)}s — ${finalized.baseLine})`,
+          "stderr",
+        );
+      };
+
       {
         ctx.log?.(
           workerPriorityLine(
@@ -330,117 +414,29 @@ const check: Check = {
         // grant's lane — `type-check-light` for a run whose programs stay
         // small, else `type-check-worker`; the memory bound the grant's
         // clamped weight could not express — then
-        // `TYPE_CHECK_WORKER_UNITS` of the CPU grant the invoking
+        // `typeCheckWorkerUnits(mode)` of the CPU grant the invoking
         // build/check/push already holds (`ctx.grant`). The worker runs in the
         // foreground as the slot's holder, whatever the lane.
+        // The record phase runs INSIDE the spawn's `consume`, so the worker's
+        // memory record (`spawnTypeCheckWorker`) is appended after it: a
+        // failed append can never cost a returned run its lint results or
+        // bases. A failure once the record phase started is not a worker
+        // crash: it is thrown, loudly.
         try {
-          result = await runWorker(root, program, plan, ctx.grant);
+          await runWorker(root, program, plan, ctx.grant, async (r) => {
+            result = r;
+            await recordPhase(r);
+          });
         } catch (err) {
+          if (recorded) throw err;
           crash = (err as Error).message;
           killedBy = killedByOf(err)?.signal;
         }
+        // A crashed worker still runs the record phase, with no outcome.
+        if (!recorded) await recordPhase(undefined);
       }
-
-      // Peak footprint and CPU of the worker, when one ran. Emitted through the
-      // runner's `ctx.log` observation seam, so the measurement is DURABLE
-      // (check-<id>.log + the build's checks section) — a terminal-only write
-      // would evaporate, and calibrating both host-admission's RAM quantum and
-      // this check's own weight is exactly an after-the-fact grep over many
-      // runs. Purely an observation: a missing rusage, or a crashed worker
-      // (which threw before it could be measured), changes nothing about the
-      // verdict below.
-      const costLine = workerCostLine(
-        `type-check worker ${program.name}`,
-        result?.peakFootprint,
-        result?.cpuTimeMicros,
-        result?.cpuSystemMicros,
-        result?.wallMs,
-        result?.slotWaitMs,
-      );
-      if (costLine !== null) ctx.log?.(costLine, "stderr");
-      if (result) {
-        ctx.log?.(
-          `${admissionLine(`type-check worker ${program.name}`, result.admission)}; memory profile ${result.profile.kind} (K ${result.profile.batchFiles} unless the run chose its own batching, heap paced at ${formatBytes(result.profile.heapRamBytes)} unless the environment set a pace)`,
-          "stderr",
-        );
-      }
-      // Where that CPU went, phase by phase (in the worker's own clock, so it
-      // excludes process start-up): the type check (the walk, both programs'
-      // build and check) and lint — then what each program held and checked.
-      if (result) {
-        const { check, lint } = result.phaseCpuSeconds;
-        const b = result.batchProcesses;
-        ctx.log?.(
-          `type-check worker ${program.name} phases: type check ${check.toFixed(1)}s, lint ${lint.toFixed(1)}s (cpu)` +
-            // The batch processes' share of the cost line's cpu (a reaped
-            // child counts in its parent's rusage) and their memory.
-            (b === null
-              ? ""
-              : `; ${b.count} batch processes: cpu ${b.cpuSeconds.toFixed(1)}s (type check and lint), peak footprint ${formatBytes(b.peakFootprintBytes)} each, ≤ ${formatBytes(b.concurrentFootprintBytes)} at once${b.unmeasured > 0 ? ` (${b.unmeasured} unmeasured)` : ""}`),
-          "stderr",
-        );
-        ctx.log?.(
-          programsLine(`type-check worker ${program.name}`, result.stats),
-          "stderr",
-        );
-        for (const line of result.tscLines) ctx.log?.(line, "stderr");
-      }
-
-      // The record phase, on the thread that holds the session: the per-file
-      // lint results and the lint verdict (see `./prepare`). The outcome is
-      // handed over only when the worker RETURNED — a crashed run records
-      // nothing new. The lint verdict comes back from there, not from the
-      // worker: most files' results are in the store, and exemptions apply at
-      // read time.
-      const outcome: ProgramOutcome | undefined = result && {
-        tscClean: !result.tscErrors,
-        lint: result.lint,
-        keys: result.lintKeys,
-        walkRoot: result.walkRoot,
-      };
-      const finalizeStart = performance.now();
-      const finalized = await thread.finalize(outcome);
-      lintLines = finalized.lintViolations ?? "";
-      // What the worker linted, and why — after the worker, because only it
-      // can tell which typed parts were stale.
-      ctx.log?.(finalized.lintLine, "stderr");
-      // What used to be a freeze of the runner's thread, still measured: the
-      // instrument for making the preparation itself cheaper — and which run
-      // base it carried from, how much that left to send, and what the record
-      // phase wrote back.
-      ctx.log?.(
-        `type-check: prepared off-thread in ${seconds(prepareMs)}s (${plan.phaseMs.map(([n, ms]) => `${n} ${seconds(ms)}s`).join(", ")}; ${plan.baseLine}; finalize ${seconds(performance.now() - finalizeStart)}s — ${finalized.baseLine})`,
-        "stderr",
-      );
     } finally {
       thread.close();
-    }
-
-    // The run's memory, as a host record: what the worker's grant weight and
-    // host admission's RAM quantum are judged against
-    // (`type-check:worker-weight-measured`, ./worker-memory.ts). After the
-    // record phase, so a failed append — which fails this check, loudly —
-    // never costs a returned run its lint results or bases. A run with any
-    // part unmeasured records nothing: a partial peak would read as a small one.
-    const batches = result?.batchProcesses ?? null;
-    if (
-      result?.peakFootprint.kind === "measured" &&
-      (batches === null || batches.unmeasured === 0)
-    ) {
-      await recordWorkerMemory({
-        t: new Date().toISOString(),
-        worktree: checkoutWorktreeName(root),
-        admission: result.admission.kind,
-        profile: result.profile.kind,
-        workerBytes: result.peakFootprint.bytes,
-        batches:
-          batches === null
-            ? null
-            : {
-                count: batches.count,
-                concurrentBytes: batches.concurrentFootprintBytes,
-              },
-      });
     }
 
     // Aggregate the two failure categories.

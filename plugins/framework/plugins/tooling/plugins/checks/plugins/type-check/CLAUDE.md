@@ -134,7 +134,7 @@ The rules that follow:
   - Its names mean what the source does: `t` salted with the file's text, every use of the file a d-edge — an edit of it, or of anything it reads, re-keys its users.
   - Transient by construction: the diagnostic fails the check.
 - **Soundness is validated**:
-  - `dual` mode (`TscMode`) also runs a full check of a fresh whole program with TypeScript's own host (`shared/full-check.ts`) and compares diagnostics + signatures per file; a divergence rewrites the store cold.
+  - `dual` mode (`TscMode`) also runs a full check of a fresh whole program with TypeScript's own host (`shared/full-check.ts`, in its own process: `shared/full-check-process.ts`) and compares diagnostics + signatures per file; a divergence rewrites the store cold.
   - By hand: `scripts/dual-check.ts` (`--mode keyed` for the check alone).
   - Daily on main: the `backstop` sub-plugin.
 
@@ -292,7 +292,8 @@ It takes the caller's `Grant`, so admission and priority cannot be skipped:
    - Why split: a whole-tree run (typed re-lint of every file, 600+ CPU-s) held the heavy pool's one background slot 8–12 min while 4-s runs queued behind it (977 s measured). ≤ 100 sources covered 63 % of 150 measured runs at ≤ 3.9 GB, ≤ 34 CPU-s.
    - The transcript's `type-check worker repo: admitted …` line says which pool, and for an escalation what the refused attempt cost.
 2. **`TYPE_CHECK_WORKER_UNITS` of the grant** (`core/worker-weight.ts`: `ceil(7.0 GB mean heavy-run footprint / PER_UNIT_BYTES)` = 2) — CPU accounting.
-   - Every run appends its measured footprints (admission, worker, batches at once) to the host log `~/.equin/logs/type-check-worker-memory/worker-memory.jsonl` (`check/worker-memory.ts`). The host check `type-check:worker-weight-measured` (main's hourly host audit) fails when `TYPE_CHECK_WORKER_PEAK_BYTES` sits more than 20 % from the last 14 days' mean heavy-run footprint, or `PER_UNIT_BYTES` more than 20 % from that mean per unit spent; re-derive from the log, never by a guessed offset.
+   - Every run appends its measured footprints (admission, profile, mode, worker, batches at once, a dual run's oracle) to the host log `~/.equin/logs/type-check-worker-memory/worker-memory.jsonl` — written by `spawnTypeCheckWorker` itself (`shared/worker-memory-log.ts`), so every caller's runs land there (the check, the build's `--skip-checks` path, the backstop); a caller has no way to spawn an unrecorded worker. The host check `type-check:worker-weight-measured` (main's hourly host audit) fails when `TYPE_CHECK_WORKER_PEAK_BYTES` sits more than 20 % from the last 14 days' mean heavy-run footprint, or `PER_UNIT_BYTES` more than 20 % from that mean per unit spent; re-derive from the log, never by a guessed offset. It also fails when `TYPE_CHECK_BACKSTOP_PEAK_BYTES` sits more than 20 % from the dual runs' mean.
+   - **A dual run weighs its oracle** (`typeCheckWorkerUnits(mode)`: `TYPE_CHECK_BACKSTOP_UNITS` for `dual`, else `TYPE_CHECK_WORKER_UNITS`). The oracle is one fresh whole program — never batched, so no K bounds it — and runs in a process of its own (`shared/full-check-process.ts`) BEFORE the walks, so the run's tree peak is the larger of the oracle and the batches beside the worker, never their sum. In the worker, it was admitted at the batched weight (7 GB) while its tree peaked 14.9–21.3 GB.
    - The grant clamps it to its own size — and **the worker then fits the share it got** (`typeCheckProfileFor(share.units)`, decided inside `grant.run`): a share of `TYPE_CHECK_WORKER_UNITS` runs the full profile (K 2000, heap paced at 4 GB); a share the clamp cut to ONE unit (an 8 GB host's whole budget, or any host whose measured window shrank) runs the one-unit profile (K 500, paced at 1.5 GB). Measured cold on an 8 GB Ubuntu VM: the full profile alone was OOM-killed (a batch at 5.2 GB), the one-unit profile peaked at ~3.9 GB for +41 % CPU (`research/2026-11-19-global-8gb-deploy-check-pass-memory.md`). A small run keeps the full pace (it fits a unit already). The admission line prints the profile; the memory log records it, and `worker-weight-measured` judges the full weight on full-profile runs only.
    - Batch processes run serially inside this share.
 3. **Foreground, as the slot's holder, in either lane**: the pool is `holder: "foreground"` and the worker spawns via `slot.spawn` (out of darwinbg even from a darwinbg session; no spelling for demoting it).
@@ -368,6 +369,8 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `LINT_GROUP_ALL`
     - `LINT_GROUP_BASE`
     - `NO_TYPED_PARTS`
+    - `TYPE_CHECK_BACKSTOP_PEAK_BYTES`
+    - `TYPE_CHECK_BACKSTOP_UNITS`
     - `TYPE_CHECK_BATCH_FILES`
     - `TYPE_CHECK_DIVERGENCE_KIND`
     - `TYPE_CHECK_FULL_PROFILE`
@@ -377,15 +380,16 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `TYPE_CHECK_WORKER_UNITS`
     - `TypeCheckDivergencePayloadSchema`
     - `typeCheckProfileFor`
+    - `typeCheckWorkerUnits`
 - Cross-plugin:
   - Imported by:
     - `framework/cli/build`
     - `framework/tooling/checks/type-check/backstop`
 - Exemptions:
   - Exempts itself from:
-    - `boundaries/no-platform-api` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/launch.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
-    - `user-path/no-unproven-claim` — `shared/batch-worker.ts` (sanctioned)
-    - `blocking-fs/sync-named` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/name-store.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/full-check-process.ts`, `shared/full-check-worker.ts`, `shared/keys.ts`, `shared/launch.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+    - `user-path/no-unproven-claim` — `shared/batch-worker.ts`, `shared/full-check-worker.ts` (sanctioned)
+    - `blocking-fs/sync-named` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check-process.ts`, `shared/full-check-worker.ts`, `shared/name-store.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (sanctioned)
 - Cli:
   - Exports (values): `readTypeCheckTree`
 - Sub-plugins:

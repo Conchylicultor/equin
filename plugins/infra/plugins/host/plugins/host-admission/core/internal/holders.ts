@@ -35,7 +35,7 @@ export const HOLDER_WORK = [
   "push",
   /** A supervised job body or a CLI exec context (`admitBackground`): one unit. */
   "job",
-  /** The type-check backstop's dual-mode worker run (2 units). */
+  /** The type-check backstop's dual-mode worker run (`TYPE_CHECK_BACKSTOP_UNITS`). */
   "type-check-backstop",
 ] as const;
 export type HolderWork = (typeof HOLDER_WORK)[number];

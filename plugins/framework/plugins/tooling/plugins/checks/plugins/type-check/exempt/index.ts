@@ -7,6 +7,8 @@ export default [
       "shared/batch-processes.ts",
       "shared/batch-worker.ts",
       "shared/full-check.ts",
+      "shared/full-check-process.ts",
+      "shared/full-check-worker.ts",
       "shared/keys.ts",
       "shared/launch.ts",
       "shared/name-check.ts",
@@ -27,16 +29,18 @@ export default [
   },
   {
     rule: "user-path/no-unproven-claim",
-    paths: ["shared/batch-worker.ts"],
+    paths: ["shared/batch-worker.ts", "shared/full-check-worker.ts"],
     kind: "sanctioned",
     reason:
-      "the job file the spawning worker wrote in its spool, passed by argv to this batch process",
+      "the job file the spawning worker wrote in its scratch (a batch's spool, the oracle's job), passed by argv to the child process",
   },
   {
     rule: "blocking-fs/sync-named",
     paths: [
       "shared/batch-processes.ts",
       "shared/batch-worker.ts",
+      "shared/full-check-process.ts",
+      "shared/full-check-worker.ts",
       "shared/name-store.ts",
       "shared/pass-set.ts",
       "shared/repo-view.ts",
