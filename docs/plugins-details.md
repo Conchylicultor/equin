@@ -37987,8 +37987,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports.ReportRow`
             - Register: `defineSupervisedJob('main-slots.reclaim')`
           - Core:
-            - Uses: 47 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
-              - `infra/git/main-slots/boot-lease` ×20
+            - Uses: 48 symbols — full list in [`plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md`](../plugins/infra/plugins/git/plugins/main-slots/REFERENCE.md)
+              - `infra/git/main-slots/boot-lease` ×21
               - `packages/timed-fs` ×6
               - `infra/paths` ×5
               - `infra/namespace` ×4
@@ -38024,6 +38024,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `drainSlowMessage`
               - `DrainSlowPayloadSchema`
               - `durableCheckoutRoot`
+              - `heldSpan`
               - `holdSlotForLife`
               - `isInSlotPool`
               - `listSlots`
@@ -38081,11 +38082,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/host-fs/user-path.joinAppPath`
                   - `packages/flock.flockSharedSync`
                   - `packages/owned-fd.openOwnedFdSync`
+                  - `packages/sleep-clock.readSleepClock`
                   - `packages/timed-fs.existsSync`
                   - `packages/timed-fs.readFileSync`
                   - `packages/timed-fs.statSync`
                 - Exports (types):
                   - `DrainRecord`
+                  - `HeldPastSwitch`
+                  - `SleepMark`
                   - `SlotHolder`
                   - `SlotHolderKind`
                   - `SlotLeaseHold`
@@ -38095,6 +38099,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `checkoutRootOfSync`
                   - `detachedHeadOf`
                   - `drainRecordFor`
+                  - `heldPastSwitch`
                   - `holdSlotLeaseSync`
                   - `MAIN_SLOT_SERVED_FILE`
                   - `MAIN_SLOT_STAMP`
@@ -38105,6 +38110,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `renderDrainRecord`
                   - `renderHolder`
                   - `renderUnserved`
+                  - `sleepMarkNow`
                   - `SLOT_DRAIN_LOG_DIR`
                   - `SLOT_HANDED_FILE`
                   - `SLOT_HOLDER_KINDS`
@@ -44991,6 +44997,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/profiling/op-log`
           - `framework/cli/test`
           - `infra/file-watcher`
+          - `infra/git/main-slots/boot-lease`
           - `infra/host/host-admission`
           - `infra/host/machine-sleep`
           - `infra/spawn`

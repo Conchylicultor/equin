@@ -47,6 +47,7 @@ export {
   DrainSlowPayloadSchema,
   drainSlowFingerprint,
   drainSlowMessage,
+  heldSpan,
   SLOTS_EXHAUSTED_REPORT_KIND,
   SlotsExhaustedPayloadSchema,
 } from "./internal/reports";

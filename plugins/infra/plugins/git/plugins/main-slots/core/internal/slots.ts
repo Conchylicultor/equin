@@ -35,6 +35,7 @@ import {
   MAIN_SLOT_SERVED_FILE,
   parseUnserved,
   renderUnserved,
+  sleepMarkNow,
   SLOT_UNSERVED_FILE,
   slotHolderRole,
   type SlotHolder,
@@ -176,7 +177,11 @@ export async function readUnserved(
   return text === null ? null : parseUnserved(file, text);
 }
 
-/** Stamp `slot` as having stopped serving every app at `at`. */
+/**
+ * Stamp `slot` as having stopped serving every app at `at`, with the sleep
+ * clock read now (the stamp is written as the switch is seen), so a later
+ * judge takes the machine's sleep out of the span (`heldPastSwitch`).
+ */
 export async function stampUnserved(
   slot: AppPath,
   stamp: { at: Date; reportAfterMs: number },
@@ -186,6 +191,7 @@ export async function stampUnserved(
     renderUnserved({
       at: stamp.at.toISOString(),
       reportAfterMs: stamp.reportAfterMs,
+      asleep: sleepMarkNow(),
     }),
   );
 }

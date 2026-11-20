@@ -168,16 +168,39 @@ export function parseHolder(file: string, text: string): SlotHolder {
   return { ...(parsed as SlotHolder), label: parsed.label ?? null };
 }
 
+/**
+ * The machine's sleep clock at one instant, as a stamp stores it
+ * (packages/sleep-clock's `readSleepClock`: which boot, and the time asleep
+ * since it). Two marks of one boot differ by exactly the sleep between them,
+ * whichever processes read them.
+ */
+export interface SleepMark {
+  boot: string;
+  asleepMs: number;
+}
+
 /** The {@link SLOT_UNSERVED_FILE} stamp. */
 export interface UnservedStamp {
   /** ISO instant the slot's last app left it. */
   at: string;
-  /** Past `at` by more than this, a releasing holder is reported. */
+  /** Past `at` by more than this much AWAKE time, a releasing holder is reported. */
   reportAfterMs: number;
+  /**
+   * The sleep clock at `at` — what lets a later reader take the machine's
+   * sleep out of the span ({@link heldPastSwitch}). `null`: the platform
+   * cannot tell, or a stamp written before it was recorded.
+   */
+  asleep: SleepMark | null;
 }
 
 export function renderUnserved(stamp: UnservedStamp): string {
   return `${JSON.stringify(stamp)}\n`;
+}
+
+function isSleepMark(v: unknown): v is SleepMark {
+  if (typeof v !== "object" || v === null) return false;
+  const m = v as Partial<SleepMark>;
+  return typeof m.boot === "string" && typeof m.asleepMs === "number";
 }
 
 export function parseUnserved(file: string, text: string): UnservedStamp {
@@ -186,11 +209,60 @@ export function parseUnserved(file: string, text: string): UnservedStamp {
     parsed === null ||
     typeof parsed.at !== "string" ||
     Number.isNaN(Date.parse(parsed.at)) ||
-    typeof parsed.reportAfterMs !== "number"
+    typeof parsed.reportAfterMs !== "number" ||
+    (parsed.asleep !== undefined &&
+      parsed.asleep !== null &&
+      !isSleepMark(parsed.asleep))
   ) {
     throw new Error(`main-slots: unserved stamp ${file} is malformed: ${text}`);
   }
-  return { at: parsed.at, reportAfterMs: parsed.reportAfterMs };
+  return {
+    at: parsed.at,
+    reportAfterMs: parsed.reportAfterMs,
+    // A stamp written before the sleep clock was recorded: the wall clock.
+    asleep: parsed.asleep ?? null,
+  };
+}
+
+/** How long a holder has kept a slot past its switch, with the machine's sleep taken out. */
+export interface HeldPastSwitch {
+  /** Wall-clock span from the switch to `now`. */
+  heldPastSwitchMs: number;
+  /** The machine's sleep inside it; `null` when it cannot be told (no mark, another boot, no sleep clock). */
+  sleptMs: number | null;
+  /** The span less that sleep — what the threshold is judged on. */
+  awakeMs: number;
+}
+
+/**
+ * The span a holder has kept the slot past its switch, judged on AWAKE time.
+ * A sleeping Mac runs nothing — no job holding the slot, and no build that
+ * needs one — but the wall clock keeps going: a supervised child that started
+ * before a night of dark wakes (≈1 min awake every 15) "held" its slot for
+ * hours while it ran for minutes (report-1794976612-es42jy: 7384 s on the wall,
+ * ~7 min awake). Pure: the sleep clock now is passed in. Where it cannot be
+ * told, the wall clock — the behaviour before.
+ */
+export function heldPastSwitch(
+  stamp: UnservedStamp,
+  now: Date,
+  asleepNow: SleepMark | null,
+): HeldPastSwitch {
+  const heldPastSwitchMs = now.getTime() - Date.parse(stamp.at);
+  const sleptMs =
+    stamp.asleep !== null &&
+    asleepNow !== null &&
+    stamp.asleep.boot === asleepNow.boot
+      ? Math.min(
+          Math.max(0, heldPastSwitchMs),
+          Math.max(0, asleepNow.asleepMs - stamp.asleep.asleepMs),
+        )
+      : null;
+  return {
+    heldPastSwitchMs,
+    sleptMs,
+    awakeMs: heldPastSwitchMs - (sleptMs ?? 0),
+  };
 }
 
 /** One drain record: a holder that kept a no-longer-serving slot past the threshold. */
@@ -198,9 +270,15 @@ export interface DrainRecord {
   kind: SlotHolderKind;
   label: string | null;
   pid: number;
-  /** How long after the slot stopped serving the holder let it go. */
+  /** How long after the slot stopped serving the holder let it go (wall clock). */
   heldPastSwitchMs: number;
-  /** The threshold it was past (the stamp's `reportAfterMs`). */
+  /**
+   * The machine's sleep inside that span ({@link heldPastSwitch}); `null` when
+   * it cannot be told — a record written before it existed, or by the guard
+   * bootstrap's copy, which reads no sleep clock.
+   */
+  sleptMs: number | null;
+  /** The threshold its AWAKE time was past (the stamp's `reportAfterMs`). */
   thresholdMs: number;
   /** The slot's root. */
   slot: string;
@@ -233,19 +311,28 @@ export function parseDrainRecord(file: string, text: string): DrainRecord {
     typeof p.slot !== "string" ||
     (p.commit !== null && typeof p.commit !== "string") ||
     typeof p.releasedAt !== "string" ||
-    (p.foundDead !== undefined && typeof p.foundDead !== "boolean")
+    (p.foundDead !== undefined && typeof p.foundDead !== "boolean") ||
+    (p.sleptMs !== undefined &&
+      p.sleptMs !== null &&
+      typeof p.sleptMs !== "number")
   ) {
     throw new Error(`main-slots: drain record ${file} is malformed: ${text}`);
   }
-  // A record written before `foundDead` existed was a release.
-  return { ...(p as DrainRecord), foundDead: p.foundDead ?? false };
+  // A record written before `foundDead` existed was a release; before
+  // `sleptMs`, nobody knew the sleep.
+  return {
+    ...(p as DrainRecord),
+    foundDead: p.foundDead ?? false,
+    sleptMs: p.sleptMs ?? null,
+  };
 }
 
 /**
  * The drain record a release at `now` leaves, or `null` when it owes none:
  * the slot still serves (no stamp), the holder does not drain (it pins its
  * slot, or outlives the switch by design), or it let go within the
- * threshold. Pure — both release paths (sync and async) decide with it.
+ * threshold of AWAKE time ({@link heldPastSwitch}). Pure — both release paths
+ * (sync and async) decide with it.
  */
 export function drainRecordFor(i: {
   stamp: UnservedStamp | null;
@@ -253,18 +340,21 @@ export function drainRecordFor(i: {
   slot: string;
   commit: string | null;
   now: Date;
+  /** The sleep clock at `now` (`sleepMarkNow()`); `null`: cannot be told. */
+  asleepNow: SleepMark | null;
   /** The holder was found dead at `now`, not released (see {@link DrainRecord.foundDead}). */
   foundDead?: boolean;
 }): DrainRecord | null {
   if (i.stamp === null || slotHolderRole(i.holder.kind) !== "drains")
     return null;
-  const heldPastSwitchMs = i.now.getTime() - Date.parse(i.stamp.at);
-  if (heldPastSwitchMs <= i.stamp.reportAfterMs) return null;
+  const held = heldPastSwitch(i.stamp, i.now, i.asleepNow);
+  if (held.awakeMs <= i.stamp.reportAfterMs) return null;
   return {
     kind: i.holder.kind,
     label: i.holder.label,
     pid: i.holder.pid,
-    heldPastSwitchMs,
+    heldPastSwitchMs: held.heldPastSwitchMs,
+    sleptMs: held.sleptMs,
     thresholdMs: i.stamp.reportAfterMs,
     slot: i.slot,
     commit: i.commit,

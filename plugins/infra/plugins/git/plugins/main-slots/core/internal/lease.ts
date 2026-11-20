@@ -31,6 +31,7 @@ import {
   releaseRecordSync,
   parseHolder,
   parseUnserved,
+  sleepMarkNow,
   renderDrainRecord,
   renderHolder,
   SLOT_DRAIN_LOG_DIR,
@@ -150,6 +151,11 @@ async function noteRelease(
     slot,
     commit: head === null ? null : detachedHeadOf(head),
     now: found.now,
+    // A holder found dead is judged up to when it was last seen alive (a past
+    // instant); the sleep clock reads the present, and the sleep after that
+    // instant is not in the span — so the wall clock, as before (a holder
+    // killed overnight would otherwise have every hour of the night taken out).
+    asleepNow: found.foundDead ? null : sleepMarkNow(),
     foundDead: found.foundDead,
   });
   if (record === null) return;

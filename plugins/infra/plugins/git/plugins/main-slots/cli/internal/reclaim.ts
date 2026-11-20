@@ -6,9 +6,12 @@ import {
 import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { checkoutAdminDir } from "@plugins/infra/plugins/paths/core";
 import {
+  heldPastSwitch,
   parseDrainRecord,
   SLOT_DRAIN_LOG_DIR,
+  sleepMarkNow,
   slotHolderRole,
+  type SleepMark,
 } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
 import {
   reapDeadHolders,
@@ -40,6 +43,8 @@ export interface ReclaimOptions {
   /** File one drain-slow report; whether it was written. Default: through the outbox. */
   fileDrainSlow?: (report: DrainSlowPayload) => Promise<boolean>;
   now?: Date;
+  /** The sleep clock at `now`. Default: read now (`null`: cannot be told — the wall clock). */
+  asleepNow?: SleepMark | null;
   /** How a removed slot's tree is deleted. Default: a recursive `rm`. */
   removeTree?: RemoveTree;
 }
@@ -120,6 +125,9 @@ async function reclaimLocked(
   const file = opts.fileDrainSlow ?? fileDrainSlow;
   await stampUnservedSlots(threshold, now);
   const states = await slotStates();
+  // Read with `now`: the sleep a still-holding span is judged without.
+  const asleepNow =
+    opts.asleepNow === undefined ? sleepMarkNow() : opts.asleepNow;
 
   const filed: DrainSlowPayload[] = [];
   for (const s of states) {
@@ -142,7 +150,7 @@ async function reclaimLocked(
       filed.push(report.payload);
       await unlink(report.file);
     }
-    for (const report of stillHolding(s, now)) {
+    for (const report of stillHolding(s, now, asleepNow)) {
       if (await file(report)) filed.push(report);
     }
   }
@@ -184,6 +192,7 @@ async function drainRecordsOf(
         label: record.label,
         pid: record.pid,
         heldPastSwitchMs: record.heldPastSwitchMs,
+        sleptMs: record.sleptMs,
         thresholdMs: record.thresholdMs,
         slot: record.slot,
         commit: record.commit,
@@ -195,18 +204,23 @@ async function drainRecordsOf(
   return out;
 }
 
-/** The holders of a draining slot past its threshold, as reports. */
-function stillHolding(s: SlotState, now: Date): DrainSlowPayload[] {
+/** The holders of a draining slot past its threshold of awake time, as reports. */
+function stillHolding(
+  s: SlotState,
+  now: Date,
+  asleepNow: SleepMark | null,
+): DrainSlowPayload[] {
   if (s.state !== "draining" || s.unserved === null) return [];
-  const heldPastSwitchMs = now.getTime() - Date.parse(s.unserved.at);
-  if (heldPastSwitchMs <= s.unserved.reportAfterMs) return [];
+  const held = heldPastSwitch(s.unserved, now, asleepNow);
+  if (held.awakeMs <= s.unserved.reportAfterMs) return [];
   return s.holders
     .filter((h) => slotHolderRole(h.kind) === "drains")
     .map((h) => ({
       kind: h.kind,
       label: h.label,
       pid: h.pid,
-      heldPastSwitchMs,
+      heldPastSwitchMs: held.heldPastSwitchMs,
+      sleptMs: held.sleptMs,
       thresholdMs: s.unserved!.reportAfterMs,
       slot: s.path,
       commit: null,

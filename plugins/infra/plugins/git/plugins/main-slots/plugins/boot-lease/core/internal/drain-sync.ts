@@ -10,13 +10,15 @@ import {
   SLOT_UNSERVED_FILE,
   type SlotHolder,
 } from "./layout";
+import { sleepMarkNow } from "./sleep-mark";
 
 // The release half of the slow-drain report, synchronous: a lease let go
 // (explicitly, or by an exit handler) compares the instant against its slot's
 // unserved stamp and, past the threshold the stamp carries, leaves a drain
 // record beside the holder records. Plain fs, nothing else: it runs on every
 // release path, an exit handler included, and in processes that load nothing
-// of main-slots' core. `reclaimSlots` (main-slots cli) files the records.
+// of main-slots' core. The span is judged on awake time (`heldPastSwitch`):
+// the sleep clock is one sync read. `reclaimSlots` (main-slots cli) files the records.
 
 function readOrNullSync(path: string): string | null {
   try {
@@ -43,13 +45,17 @@ export function noteLeaseReleaseSync(i: {
 }): boolean {
   const stampFile = join(i.admin, SLOT_UNSERVED_FILE);
   const stampText = readOrNullSync(stampFile);
+  if (stampText === null) return false;
   const head = readOrNullSync(join(dirname(i.admin), "HEAD"));
   const record = drainRecordFor({
-    stamp: stampText === null ? null : parseUnserved(stampFile, stampText),
+    stamp: parseUnserved(stampFile, stampText),
     holder: i.holder,
     slot: i.slot,
     commit: head === null ? null : detachedHeadOf(head),
     now: i.now ?? new Date(),
+    // The sleep clock reads the PRESENT: a span ending at a given past `now`
+    // is judged on the wall clock rather than less sleep that came after it.
+    asleepNow: i.now === undefined ? sleepMarkNow() : null,
   });
   if (record === null) return false;
   const dir = join(i.admin, SLOT_DRAIN_LOG_DIR);

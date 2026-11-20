@@ -267,6 +267,7 @@ describe("the main-slot lease", () => {
       BOOT_LEASE.renderUnserved({
         at: new Date(Date.now() - 60_000).toISOString(),
         reportAfterMs: 10_000,
+        asleep: null,
       }),
     );
     lease.release();

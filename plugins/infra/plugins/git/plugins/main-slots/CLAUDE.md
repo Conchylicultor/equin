@@ -219,12 +219,22 @@ A process that keeps an old slot busy more than `main-slots.drainReportAfterSec`
 a normal wait:
 
 - **When serving stopped** is stamped on the slot (`main-slot-unserved`:
-  `{at, reportAfterMs}`) by whoever sees its last app leave — `serveSlot`, a
+  `{at, reportAfterMs, asleep}`) by whoever sees its last app leave — `serveSlot`, a
   build moving central's spec, `reclaimSlots` (`stampUnservedSlots`). The
   threshold travels in the stamp, so the release paths read no config.
+- **Judged on awake time** (`heldPastSwitch`, boot-lease): the stamp carries
+  the machine's sleep clock (`asleep`: `packages/sleep-clock`'s boot + time
+  asleep, machine-wide), and every judge takes the sleep inside the span out
+  of it. A sleeping Mac runs nothing — neither the holder nor a build that
+  wants the slot — so a nightly supervised child that started before a night
+  of dark wakes (≈1 min awake every 15) is not a "7384 s" drain
+  (report-1794976612-es42jy: ~7 min awake). Where the sleep cannot be told (a
+  pre-`asleep` stamp, a reboot in between, off darwin, the guard bootstrap's
+  builtins-only copy), the wall clock. The report shows both
+  (`412 s awake (7384 s on the wall clock)`).
 - **Captured at release**, so nothing is missed between builds: a lease let go
   past the threshold leaves `<admin dir>/drain-log/<pid>.<n>.json`
-  (`{kind, label, pid, heldPastSwitchMs, thresholdMs, slot, commit}`) — plain
+  (`{kind, label, pid, heldPastSwitchMs, sleptMs, thresholdMs, slot, commit}`) — plain
   `fs` in boot-lease (`noteLeaseReleaseSync`, and its async twin in `lease.ts`),
   on every release path: an explicit release, the CLI bootstrap's exit handler,
   a lifetime lease's `releaseAtExitSync`, the guard bootstrap's release
@@ -313,8 +323,8 @@ a normal wait:
     - `reports.ReportRow`
   - Register: `defineSupervisedJob('main-slots.reclaim')`
 - Core:
-  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/git/main-slots/boot-lease` ×20
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/git/main-slots/boot-lease` ×21
     - `packages/timed-fs` ×6
     - `infra/paths` ×5
     - `infra/namespace` ×4
@@ -350,6 +360,7 @@ a normal wait:
     - `drainSlowMessage`
     - `DrainSlowPayloadSchema`
     - `durableCheckoutRoot`
+    - `heldSpan`
     - `holdSlotForLife`
     - `isInSlotPool`
     - `listSlots`

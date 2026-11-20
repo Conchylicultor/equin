@@ -11,6 +11,7 @@ export type { SlotLeaseHold } from "./internal/hold-sync";
 export {
   detachedHeadOf,
   drainRecordFor,
+  heldPastSwitch,
   MAIN_SLOT_SERVED_FILE,
   parseDrainRecord,
   parseUnserved,
@@ -28,8 +29,11 @@ export {
   SLOT_LEASES_DIR,
   SLOT_LOCK_FILE,
 } from "./internal/layout";
+export { sleepMarkNow } from "./internal/sleep-mark";
 export type {
   DrainRecord,
+  HeldPastSwitch,
+  SleepMark,
   SlotHolder,
   SlotHolderKind,
   SlotLeaseMode,

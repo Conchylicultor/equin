@@ -47,9 +47,11 @@ import {
 import {
   holdSlotLeaseSync,
   renderDrainRecord,
+  renderUnserved,
   SLOT_DRAIN_LOG_DIR,
   SLOT_HANDED_FILE,
   SLOT_LEASES_DIR,
+  SLOT_UNSERVED_FILE,
 } from "@plugins/infra/plugins/git/plugins/main-slots/plugins/boot-lease/core";
 import {
   acquireSharedLease,
@@ -681,6 +683,47 @@ describe("slow drains", () => {
     ]);
     expect(readdirSync(drainLog)).toEqual([]);
     await stuck.release();
+  });
+
+  test("a holder still holding is judged on awake time: a span the machine slept through is not a slow drain", async () => {
+    const { root, first } = await repo("repo");
+    const a = await slotAt(root, first);
+    const admin = (await checkoutAdminDir(a))!;
+    const backstop = await acquireSharedLease(
+      a,
+      "exec-child",
+      "type-check-backstop",
+    );
+    // Its app switched away two hours ago, before a night of dark wakes:
+    // 7 200 s on the wall clock, of which 7 000 s asleep (200 s awake).
+    writeFileSync(
+      join(admin, SLOT_UNSERVED_FILE),
+      renderUnserved({
+        at: new Date(Date.now() - 7_200_000).toISOString(),
+        reportAfterMs: 300_000,
+        asleep: { boot: "boot-1", asleepMs: 1_000_000 },
+      }),
+    );
+    const slept = collector();
+    await reclaimSlots({
+      drainReportAfterMs: 300_000,
+      fileDrainSlow: slept.file,
+      asleepNow: { boot: "boot-1", asleepMs: 8_000_000 },
+    });
+    expect(slept.filed).toEqual([]);
+
+    // The same span awake throughout is reported, with the sleep it saw.
+    const awake = collector();
+    await reclaimSlots({
+      drainReportAfterMs: 300_000,
+      fileDrainSlow: awake.file,
+      asleepNow: { boot: "boot-1", asleepMs: 1_000_000 },
+    });
+    expect(
+      awake.filed.map((r) => [r.label, r.stillHolding, r.sleptMs]),
+    ).toEqual([["type-check-backstop", true, 0]]);
+
+    await backstop.release();
   });
 
   test("a holder killed past the threshold is reported found dead — its pid reused or not", async () => {
@@ -1509,6 +1552,7 @@ describe("central pins its slot", () => {
         label: kind,
         pid,
         heldPastSwitchMs: 134_000,
+        sleptMs: null,
         thresholdMs: THRESHOLD_MS,
         slot,
         commit: first,

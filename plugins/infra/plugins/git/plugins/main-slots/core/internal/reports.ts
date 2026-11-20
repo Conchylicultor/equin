@@ -52,7 +52,14 @@ export const DrainSlowPayloadSchema = z.object({
   kind: z.enum(SLOT_HOLDER_KINDS),
   label: z.string().nullable(),
   pid: z.number().int(),
+  /** Wall-clock span from the switch to the release (or to reclaim, still holding). */
   heldPastSwitchMs: z.number(),
+  /**
+   * The machine's sleep inside that span — the threshold is judged on the
+   * span less it. `null`: it could not be told (another boot, no sleep clock,
+   * a record written before it existed). Absent on reports filed before it.
+   */
+  sleptMs: z.number().nullable().default(null),
   thresholdMs: z.number(),
   slot: z.string(),
   commit: z.string().nullable(),
@@ -77,10 +84,23 @@ export function drainSlowFingerprint(
 /** The one-line message a drain-slow report carries. */
 export function drainSlowMessage(d: DrainSlowPayload): string {
   const who = `${d.kind}${d.label === null ? "" : ` ${d.label}`} (pid ${d.pid})`;
-  const s = Math.round(d.heldPastSwitchMs / 1000);
+  const s = heldSpan(d);
   if (d.stillHolding)
-    return `${who} still holds main slot ${d.slot} ${s} s after its app switched away`;
+    return `${who} still holds main slot ${d.slot} ${s} after its app switched away`;
   if (d.foundDead)
-    return `${who} held main slot ${d.slot} at least ${s} s after its app switched away, then was killed while holding it`;
-  return `${who} held main slot ${d.slot} ${s} s after its app switched away`;
+    return `${who} held main slot ${d.slot} at least ${s} after its app switched away, then was killed while holding it`;
+  return `${who} held main slot ${d.slot} ${s} after its app switched away`;
+}
+
+/**
+ * The span as judged: its awake seconds, with the wall clock beside them when
+ * the machine slept inside it (`412 s awake (7384 s on the wall clock)`).
+ */
+export function heldSpan(
+  d: Pick<DrainSlowPayload, "heldPastSwitchMs" | "sleptMs">,
+): string {
+  const wall = Math.round(d.heldPastSwitchMs / 1000);
+  if (d.sleptMs === null || d.sleptMs < 1000) return `${wall} s`;
+  const awake = Math.round((d.heldPastSwitchMs - d.sleptMs) / 1000);
+  return `${awake} s awake (${wall} s on the wall clock)`;
 }
