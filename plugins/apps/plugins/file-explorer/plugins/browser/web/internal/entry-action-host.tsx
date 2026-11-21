@@ -17,10 +17,18 @@ export interface EntryActionHost {
    * inside an archive — so it can be renamed, moved, copied or removed.
    */
   onDisk: (path: string) => boolean;
+  /** The folder holding `path`. */
+  folderOf: (path: string) => string;
   startRename: (path: string) => void;
   remove: (paths: readonly string[], mode: RemoveMode) => void;
   /** Put `paths` on the page's file clipboard, to paste as copies or a move. */
   toClipboard: (paths: readonly string[], mode: "copy" | "cut") => void;
+  /** How many entries a paste would put down; `0` with nothing on the clipboard to paste here. */
+  pasteCount: number;
+  /** Whether `folder` takes new entries — one of the system's own folders. */
+  takesEntries: (folder: string) => boolean;
+  /** Paste the clipboard's entries into `folder` — as copies, or moved for a cut. */
+  paste: (folder: string) => void;
   compress: (paths: readonly string[]) => void;
 }
 

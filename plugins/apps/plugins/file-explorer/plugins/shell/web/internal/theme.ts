@@ -42,7 +42,10 @@ const DARK: typeof LIGHT = {
   // default (the double stroke on dark).
   popover: "#242428",
   line: "#2a2a2e",
-  lineSoft: "#222225",
+  // A translucent hairline, not an opaque grey: the mockup's #222225 on the
+  // canvas, but one that still reads on the lighter menu — an opaque line
+  // darker than the popover drew a menu's dividers as blank gaps.
+  lineSoft: "rgb(255 255 255 / 0.05)",
   hover: "rgb(255 255 255 / 0.05)",
   fill: "#222225",
   text: "#ededef",

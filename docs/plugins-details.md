@@ -5596,15 +5596,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
               - `FileBrowserSlots.RowActions` ← `apps.file-explorer.browser`
               - `FileBrowserSlots.RowActions` ← `apps.file-explorer.places`
-            - Contributes: 25 contributions — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
-              - `FileBrowserSlots.RowActions` ×10
+            - Contributes: 26 contributions — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+              - `FileBrowserSlots.RowActions` ×11
               - `Pane.Register` ×6
               - `FileBrowserHeader` ×3
               - `FilePreviewHeader` ×3
               - `ConfigV2.WebRegister` "files"
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `ThemeEngine.SubTheme` "Files document"
-            - Uses: 107 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 110 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×11
               - `primitives/pane` ×9
               - `primitives/css/ui-kit` ×7
@@ -5616,6 +5616,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live/live-state` ×3
               - `primitives/css/resizable` ×3
               - `primitives/path-bar` ×3
+              - `reorder` ×3
               - `config_v2` ×2
               - `primitives/copy-to-clipboard` ×2
               - `primitives/dom/web-storage` ×2
@@ -5623,7 +5624,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/networking` ×2
               - `primitives/overlay/cursor-menu` ×2
               - `primitives/shortcuts` ×2
-              - `primitives/slot-render` ×2
               - `shell/notifications` ×2
               - `companions/menu-bar/app-window.useNativeFileDrag`
               - `primitives/action-presentation.MenuItemForm`
@@ -5648,7 +5648,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/scope/dom-scope.defineDomScope`
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/search.SearchInput`
+              - `primitives/slot-render.renderIsolated`
               - `primitives/syntax-highlight/overlay-textarea.CodeTextarea`
+              - `reorder/node-types.useReorderNodeTypes`
               - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
             - Exports (types):
@@ -50912,6 +50914,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/website/shell`
           - `primitives/adaptive-bar`
           - `primitives/icon-button`
+          - `reorder/node-types/divider`
     - **`adaptive-bar`** — Overflow as relocation, not transformation: a bar that asks each widget for a smaller form of itself and moves the rest — as themselves, ONE live instance each, never rendered twice — into an always-mounted panel. Each occupant owns one stable portal container the bar re-parents imperatively, so a relocated slider is still the same slider mid-drag; measurement reads the real nodes, and every policy (which forms exist, how eagerly to yield) comes from the widget through action-presentation rather than from the host.
       - Web:
         - Uses:
@@ -50949,6 +50952,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AdaptiveBarItem`
           - `adaptiveBarReportSink`
           - `AdaptiveBarYield`
+          - `isAdaptiveBarItem`
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
@@ -50956,6 +50960,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata`
           - `conversations/conversation-view/prompt-templates`
           - `primitives/pane`
+          - `reorder/node-types/divider`
           - `reorder/node-types/overflow`
           - `reports/adaptive-bar`
       - Exemptions:
@@ -54734,6 +54739,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit`
               - `primitives/dom/element-size`
               - `primitives/dom/layout-host`
+              - `reorder/node-types/divider`
           - Exemptions:
             - Exempts itself from: `resize-observer-safety/no-raw-resize-observer` — `web/internal/after-layout.ts` (sanctioned)
           - Web:
@@ -60408,6 +60414,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Cross-plugin:
     - Imported by:
       - `apps-core`
+      - `apps/file-explorer/browser`
       - `conversations/conversation-view/artifacts`
       - `page/editor`
       - `reorder/slot-middleware`
@@ -60512,6 +60519,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-3xs`
           - `ui/tokens/type-scale --line-height-3xs`
         - Imported by:
+          - `apps/file-explorer/browser`
           - `fields/reorder-tree/config/renderer`
           - `reorder`
           - `reorder/node-types/divider`
@@ -60527,9 +60535,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `ReorderNodes.NodeType` "divider"
             - Uses:
+              - `primitives/action-presentation.useActionForm`
+              - `primitives/adaptive-bar.isAdaptiveBarItem`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSize`
               - `primitives/css/ui-kit.useControlSize`
+              - `primitives/dom/after-layout.afterLayout`
               - `primitives/sortable-list/deferred-item.DeferredSortableItem`
               - `reorder/node-types.RemoveNodeButton`
               - `reorder/node-types.ReorderNodes`

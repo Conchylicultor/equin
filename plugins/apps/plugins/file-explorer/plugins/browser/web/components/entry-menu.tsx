@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -8,10 +8,13 @@ import {
   type CursorAnchor,
 } from "@plugins/primitives/plugins/overlay/plugins/cursor-menu/web";
 import { MenuItemForm } from "@plugins/primitives/plugins/action-presentation/web";
+import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import {
-  renderIsolated,
-  useSlotOrder,
-} from "@plugins/primitives/plugins/slot-render/web";
+  isNodeData,
+  useReorderedEntries,
+  type TopLevelEntry,
+} from "@plugins/reorder/web";
+import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
@@ -41,8 +44,6 @@ export interface EntryMenuState {
   folder: string;
   /** Whether that folder takes new entries (one of the system's own, not inside an archive). */
   writable: boolean;
-  /** On a folder: whether the folder itself takes entries (a paste into it). */
-  folderWritable: boolean;
 }
 
 /**
@@ -70,23 +71,16 @@ export function EntryMenu({
 }): ReactNode {
   const target = menu?.target ?? null;
   const writable = menu?.writable ?? false;
-  // A folder's own menu pastes into it; anything else pastes beside it.
-  const pasteWritable =
-    target?.kind === "entry" && target.row.kind === "dir"
-      ? (menu?.folderWritable ?? false)
-      : writable;
   return (
     <CursorAnchoredMenu anchor={menu?.anchor ?? null} onClose={onClose}>
       {target?.kind === "entry" && (
-        <>
-          <MenuTargets paths={target.paths}>
-            <RowActionItems row={target.row} />
-          </MenuTargets>
-          <DropdownMenuSeparator />
-        </>
+        <MenuTargets paths={target.paths}>
+          <RowActionItems row={target.row} />
+        </MenuTargets>
       )}
       {canCreate && (
         <>
+          {target?.kind === "entry" && <DropdownMenuSeparator />}
           <DropdownMenuItem disabled={!writable} onClick={() => onNew("file")}>
             <Icon icon={newFileIcon} />
             New text file
@@ -97,34 +91,48 @@ export function EntryMenu({
           </DropdownMenuItem>
         </>
       )}
-      <DropdownMenuItem
-        disabled={!pasteWritable || canPaste === 0}
-        shortcut={formatShortcutLabel("mod+v")}
-        onClick={onPaste}
-      >
-        <Icon icon={pasteIcon} />
-        {canPaste > 1 ? `Paste ${canPaste} items` : "Paste"}
-      </DropdownMenuItem>
+      {target?.kind === "folder" && (
+        <>
+          {canCreate && <DropdownMenuSeparator />}
+          <DropdownMenuItem
+            disabled={!writable || canPaste === 0}
+            shortcut={formatShortcutLabel("mod+v")}
+            onClick={onPaste}
+          >
+            <Icon icon={pasteIcon} />
+            {canPaste > 1 ? `Paste ${canPaste} items` : "Paste"}
+          </DropdownMenuItem>
+        </>
+      )}
     </CursorAnchoredMenu>
   );
 }
 
-/** Every row action of `row`, in the hover cluster's layout order, as menu items. */
+/**
+ * Every row action of `row`, in the hover cluster's layout order and grouped
+ * by its dividers, as menu items. A divider is drawn by its own node type —
+ * the very rule the `⋯` panel draws — which hides itself when the group it
+ * closes renders nothing (single-entry actions on a selection), so a rule
+ * never doubles up or closes off an end.
+ */
 function RowActionItems({ row }: { row: EntryRow }): ReactNode {
-  const order = useSlotOrder(FileBrowserSlots.RowActions);
-  const actions =
+  const slot = FileBrowserSlots.RowActions;
+  const order = useReorderedEntries(
+    slot.id,
+    slot.useContributions() as unknown as readonly Contribution[],
+  );
+  const nodeTypes = useReorderNodeTypes();
+  const state =
     order.status === "ready"
       ? order.data
       : order.status === "error"
         ? (order.stale ?? null)
         : null;
-  if (actions === null) {
+  if (state === null) {
     if (order.status === "error") {
       throw new Error(
         "file-explorer: the row actions' layout could not be read",
-        {
-          cause: order.error,
-        },
+        { cause: order.error },
       );
     }
     return null;
@@ -134,13 +142,42 @@ function RowActionItems({ row }: { row: EntryRow }): ReactNode {
     hasChildren: false,
     placement: "cluster",
   };
-  return actions.map((action) => (
-    <MenuItemForm key={`${action._pluginId ?? ""}:${action.id}`}>
-      {renderIsolated(
-        FileBrowserSlots.RowActions,
-        action as unknown as Contribution,
-        props,
-      )}
-    </MenuItemForm>
-  ));
+  // An overflow group's members stand in its place: a menu has no `⋯`.
+  const flat = (entries: readonly TopLevelEntry[]): TopLevelEntry[] =>
+    entries.flatMap((e) =>
+      isNodeData(e) && e.members !== undefined ? flat(e.members) : [e],
+    );
+  return flat(state.entries).map((entry) => {
+    if (!isNodeData(entry)) {
+      return (
+        <MenuItemForm key={`${entry._pluginId ?? ""}:${String(entry.id)}`}>
+          {renderIsolated(slot, entry, props)}
+        </MenuItemForm>
+      );
+    }
+    const nodeType = nodeTypes.get(entry.type);
+    if (nodeType === undefined) {
+      throw new Error(
+        `file-explorer: the row actions' layout names an unknown node type "${entry.type}"`,
+      );
+    }
+    return (
+      <Fragment key={entry.id ?? entry.type}>
+        {nodeType.render({
+          payload: entry.payload,
+          id: entry.id,
+          editMode: false,
+          orientation: "vertical",
+          onPatch: () => {
+            throw new Error(
+              "file-explorer: a menu's layout node is never edited",
+            );
+          },
+          onRemove: () => {
+            throw new Error("file-explorer: a menu's divider is never removed");
+          },
+        })}
+      </Fragment>
+    );
+  });
 }

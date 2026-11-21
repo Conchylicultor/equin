@@ -68,6 +68,7 @@ fields.
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --line-height-3xs`
   - Imported by:
+    - `apps/file-explorer/browser`
     - `fields/reorder-tree/config/renderer`
     - `reorder`
     - `reorder/node-types/divider`

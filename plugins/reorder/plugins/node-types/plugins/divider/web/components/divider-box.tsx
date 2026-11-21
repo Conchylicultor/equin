@@ -5,6 +5,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { DeferredSortableItem } from "@plugins/primitives/plugins/sortable-list/plugins/deferred-item/web";
 import { RemoveNodeButton } from "@plugins/reorder/plugins/node-types/web";
+import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
 import { useOrphanRule } from "../internal/use-orphan-rule";
 
 // A divider renders as a hairline rule between the items either side of it,
@@ -27,6 +28,13 @@ import { useOrphanRule } from "../internal/use-orphan-rule";
 // nothing) — hides itself (`useOrphanRule`), so a rule never closes off an
 // empty end of the area or doubles up. In edit mode it always shows: it is a
 // draggable placeholder there.
+//
+// Inside an `overflow` bucket the divider is one of the bucket's adaptive-bar
+// occupants, relocated into the `⋯` panel with the actions it separates. It
+// declares the `"row"` rung, so there it draws flat — the panel is a column
+// even when the bucket's row is not — and it judges its neighbours through the
+// bar's occupant boxes, so a group whose actions all declined the row closes
+// no rule.
 const DIVIDER_GAP = "calc(var(--space-xs) + var(--space-2xs))";
 
 /** The upright rule's length, as a share of the row's control height. */
@@ -49,8 +57,12 @@ export function DividerBox({
   onRemove: () => void;
 }) {
   const controlSize = useControlSize();
-  const upright = orientation === "horizontal";
-  const [orphan, restRef] = useOrphanRule();
+  // In a `⋯` bucket the bar relocates the divider into its panel — a column,
+  // whatever way the bucket's row runs — as its `"row"` form: a flat rule
+  // between the panel's rows. Outside a bar this is a constant `"full"`.
+  const form = useActionForm({ shrinksTo: ["row"] });
+  const upright = orientation === "horizontal" && form !== "row";
+  const [orphan, restRef] = useOrphanRule(form);
 
   // The rule itself — the same element in both modes, so the edit-mode
   // placeholder carries exactly what the live divider draws.

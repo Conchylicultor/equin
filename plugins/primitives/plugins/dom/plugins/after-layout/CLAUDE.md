@@ -136,6 +136,7 @@ and `dom/layout-host` (`useHostFlowAxis`).
     - `primitives/css/ui-kit`
     - `primitives/dom/element-size`
     - `primitives/dom/layout-host`
+    - `reorder/node-types/divider`
 - Exemptions:
   - Exempts itself from: `resize-observer-safety/no-raw-resize-observer` — `web/internal/after-layout.ts` (sanctioned)
 - Web:

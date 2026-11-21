@@ -69,6 +69,16 @@ export interface AdaptiveBarItemProps {
  * there is no version of "stop portalling" that keeps the instance. It only
  * happens when the bar above appears or goes.
  */
+/**
+ * Whether `el` is an occupant's container — the box the bar moves between the
+ * row and the panel. It stands for its one occupant among the dock's children,
+ * so a reader judging an occupant by its neighbours (a divider's "is there
+ * anything on either side of me") looks through it to the occupant's siblings.
+ */
+export function isAdaptiveBarItem(el: Element): boolean {
+  return el.hasAttribute("data-adaptive-bar-item");
+}
+
 export function AdaptiveBarItem({
   id,
   className,

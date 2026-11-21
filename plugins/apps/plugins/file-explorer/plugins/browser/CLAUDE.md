@@ -25,15 +25,15 @@
     - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
     - `FileBrowserSlots.RowActions` ← `apps.file-explorer.browser`
     - `FileBrowserSlots.RowActions` ← `apps.file-explorer.places`
-  - Contributes: 25 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `FileBrowserSlots.RowActions` ×10
+  - Contributes: 26 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `FileBrowserSlots.RowActions` ×11
     - `Pane.Register` ×6
     - `FileBrowserHeader` ×3
     - `FilePreviewHeader` ×3
     - `ConfigV2.WebRegister` "files"
     - `FieldPresentation.Register` "collection:file-explorer.entry"
     - `ThemeEngine.SubTheme` "Files document"
-  - Uses: 107 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 110 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×11
     - `primitives/pane` ×9
     - `primitives/css/ui-kit` ×7
@@ -45,6 +45,7 @@
     - `network/live/live-state` ×3
     - `primitives/css/resizable` ×3
     - `primitives/path-bar` ×3
+    - `reorder` ×3
     - `config_v2` ×2
     - `primitives/copy-to-clipboard` ×2
     - `primitives/dom/web-storage` ×2
@@ -52,7 +53,6 @@
     - `primitives/networking` ×2
     - `primitives/overlay/cursor-menu` ×2
     - `primitives/shortcuts` ×2
-    - `primitives/slot-render` ×2
     - `shell/notifications` ×2
     - `companions/menu-bar/app-window.useNativeFileDrag`
     - `primitives/action-presentation.MenuItemForm`
@@ -77,7 +77,9 @@
     - `primitives/scope/dom-scope.defineDomScope`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/search.SearchInput`
+    - `primitives/slot-render.renderIsolated`
     - `primitives/syntax-highlight/overlay-textarea.CodeTextarea`
+    - `reorder/node-types.useReorderNodeTypes`
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
   - Exports (types):

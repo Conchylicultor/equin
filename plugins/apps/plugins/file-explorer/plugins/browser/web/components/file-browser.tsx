@@ -486,12 +486,14 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
       paths: paths.map((p) => absolutePath(p, home)),
       mode,
     });
+  // The folder is the system's own when it is listed so, or sits in a folder
+  // listed so (a folder never opened has no listing of its own; an archive is
+  // a file row, so a folder of a folder on disk is on disk itself).
+  const takesEntries = (folder: string): boolean =>
+    edits !== null &&
+    (writable(folder) || (folder !== dir && writable(folderOf(folder))));
   const paste = (folder: string) => {
-    // The folder is the system's own when it is listed so, or sits in a
-    // folder listed so (a folder never opened has no listing of its own).
-    const onDiskFolder =
-      writable(folder) || (folder !== dir && writable(folderOf(folder)));
-    if (pasteable === null || edits === null || !onDiskFolder) return;
+    if (pasteable === null || edits === null || !takesEntries(folder)) return;
     if (pasteable.mode === "copy") {
       void edits.copy(pasteable.paths, folder).then(selectAll);
       return;
@@ -513,6 +515,7 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
   });
   const removeFromHost = useEventCallback(removeEntries);
   const toClipboardFromHost = useEventCallback(toClipboard);
+  const pasteFromHost = useEventCallback(paste);
   const compress = useEventCallback((paths: readonly string[]) => {
     if (edits === null) return;
     void edits.compress(paths).then((path) => {
@@ -524,9 +527,20 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
       system,
       abs: (path) => absolutePath(path, home),
       onDisk: (path) => isOnDisk(listings, parentPath(path, home) ?? dir),
+      folderOf: (path) => parentPath(path, home) ?? dir,
       startRename,
       remove: removeFromHost,
       toClipboard: toClipboardFromHost,
+      pasteCount: pasteable?.paths.length ?? 0,
+      takesEntries: (folder) => {
+        if (edits === null) return false;
+        const parent = parentPath(folder, home) ?? dir;
+        return (
+          isOnDisk(listings, folder) ||
+          (folder !== dir && isOnDisk(listings, parent))
+        );
+      },
+      paste: pasteFromHost,
       compress,
     }),
     [
@@ -537,6 +551,9 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
       startRename,
       removeFromHost,
       toClipboardFromHost,
+      pasteable,
+      edits,
+      pasteFromHost,
       compress,
     ],
   );
@@ -596,7 +613,6 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
         target: { kind: "folder", dir },
         folder: dir,
         writable: writable(dir),
-        folderWritable: writable(dir),
       });
       return;
     }
@@ -614,9 +630,6 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
       },
       folder,
       writable: writable(folder),
-      // A folder of a folder on disk is on disk itself (an archive is a
-      // file row), listed or not.
-      folderWritable: entryRow.kind === "dir" && writable(folder),
     });
   };
 
@@ -733,15 +746,8 @@ function Listing({ browser }: { browser: FileBrowserReady }): ReactNode {
                 if (menu !== null) newEntry(menu.folder, kind);
               }}
               onPaste={() => {
-              if (menu === null) return;
-                // A folder's own menu pastes into it; anything else, beside it.
-              const t = menu.target;
-                paste(
-                  t.kind === "entry" && t.row.kind === "dir"
-                    ? t.row.path
-                    : menu.folder,
-                );
-            }}
+                if (menu !== null) paste(menu.folder);
+              }}
             />
           </Scroll>
         }

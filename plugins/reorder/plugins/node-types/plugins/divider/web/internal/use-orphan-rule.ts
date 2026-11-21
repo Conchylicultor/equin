@@ -1,4 +1,6 @@
 import { useLayoutEffect, useState } from "react";
+import { isAdaptiveBarItem } from "@plugins/primitives/plugins/adaptive-bar/web";
+import { afterLayout } from "@plugins/primitives/plugins/dom/plugins/after-layout/web";
 
 /**
  * Whether a divider at rest has nothing to separate: no item drawn anywhere
@@ -12,45 +14,76 @@ import { useLayoutEffect, useState } from "react";
  * nothing after them), and a rule at either end of what shows goes.
  *
  * Re-judged on every change of the area's children (a MutationObserver on the
- * divider's parent: an item mounting or unmounting its content), never polled.
+ * divider's parent: an item mounting or unmounting its content, an adaptive
+ * bar hiding an occupant that came to nothing), never polled.
+ *
+ * Judged after layout, not in the effect: a divider in an adaptive bar's `⋯`
+ * bucket is an occupant the bar moves into its panel in its OWN layout effect,
+ * which runs after this one — the area is where the divider sits once the bar
+ * has placed it. `placement` names that placement (the form the bar gave it),
+ * so a move re-judges against the new neighbours.
  *
  * Returns the verdict and the callback ref for the rule's element (`null`
  * while it is not mounted, e.g. in edit mode — never judged then).
  */
-export function useOrphanRule(): [
-  orphan: boolean,
-  ref: (el: HTMLElement | null) => void,
-] {
+export function useOrphanRule(
+  placement: string,
+): [orphan: boolean, ref: (el: HTMLElement | null) => void] {
   const [el, setEl] = useState<HTMLElement | null>(null);
   const [orphan, setOrphan] = useState(false);
   useLayoutEffect(() => {
     if (!el) return;
-    const unit = siblingUnit(el);
-    const parent = unit.parentElement;
-    if (!parent) return;
-    const judge = () => setOrphan(isOrphan(unit));
-    judge();
+    // Watches the area the divider sits in NOW: a move out of it (the bar
+    // docking the divider's box into its panel) is a change of the old area's
+    // children, and re-targets the watch on the new one.
+    let watched: Element | null = null;
+    const judge = () => {
+      const unit = siblingUnit(el);
+      const parent = unit.parentElement;
+      if (parent !== watched) {
+        observer.disconnect();
+        watched = parent;
+        if (parent) {
+          observer.observe(parent, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["hidden"],
+          });
+        }
+      }
+      if (parent) setOrphan(isOrphan(unit));
+    };
     const observer = new MutationObserver(judge);
-    observer.observe(parent, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, [el]);
+    const cancel = afterLayout(judge);
+    return () => {
+      cancel();
+      observer.disconnect();
+    };
+  }, [el, placement]);
   return [el !== null && orphan, setEl];
 }
 
 /**
  * The element that stands for the divider among the area's entries: itself,
- * or the box-less (`display: contents`) wrapper that holds only it — a
- * container's member span.
+ * or the wrapper that holds only it — a box-less (`display: contents`) one (a
+ * container's member span), or an adaptive bar's occupant container (a
+ * divider in a `⋯` bucket, moved into the panel inside its own box).
  */
 function siblingUnit(el: HTMLElement): Element {
   let unit: Element = el;
   for (
     let p = unit.parentElement;
-    p && p.childElementCount === 1 && isContents(p);
+    p && p.childElementCount === 1 && isWrapper(p);
     p = p.parentElement
   )
     unit = p;
   return unit;
+}
+
+/** A box that stands for the one entry inside it. */
+function isWrapper(el: Element): boolean {
+  return isContents(el) || isAdaptiveBarItem(el);
 }
 
 function isOrphan(unit: Element): boolean {
@@ -75,7 +108,7 @@ function isOrphan(unit: Element): boolean {
 function isRule(el: Element): boolean {
   return (
     el.getAttribute("role") === "separator" ||
-    (isContents(el) &&
+    (isWrapper(el) &&
       el.childElementCount === 1 &&
       isRule(el.firstElementChild!))
   );

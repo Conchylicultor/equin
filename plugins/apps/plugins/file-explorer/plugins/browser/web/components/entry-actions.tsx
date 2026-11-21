@@ -19,6 +19,7 @@ const revealIcon = symbol("folder-open");
 const renameIcon = symbol("drive-file-rename-outline");
 const copyIcon = symbol("content-copy");
 const cutIcon = symbol("content-cut");
+const pasteIcon = symbol("content-paste");
 const compressIcon = symbol("folder-zip");
 const trashIcon = symbol("delete");
 const deleteIcon = symbol("delete-forever");
@@ -117,6 +118,32 @@ export function CutAction({ row }: ItemActionProps<EntryRow>): ReactNode {
       label={counted(targets, "Cut", "Cut # items")}
       shortcut="mod+x"
       onClick={() => host.toClipboard(targets, "cut")}
+    />
+  );
+}
+
+/**
+ * Paste — the clipboard's entries into a folder row, or beside a file row (⌘V
+ * pastes into the folder shown). Offered whenever the folder takes entries,
+ * greyed out while there is nothing to paste.
+ */
+export function PasteAction({ row }: ItemActionProps<EntryRow>): ReactNode {
+  const host = useEntryActionHost();
+  const folder = row.kind === "dir" ? row.path : host.folderOf(row.path);
+  if (!host.takesEntries(folder)) return null;
+  const n = host.pasteCount;
+  const items = n > 1 ? ` ${n} items` : "";
+  return (
+    <IconButton
+      icon={pasteIcon}
+      label={
+        row.kind === "dir"
+          ? `Paste${items} into “${row.name}”`
+          : `Paste${items}`
+      }
+      shortcut={row.kind === "dir" ? undefined : "mod+v"}
+      disabled={n === 0}
+      onClick={() => host.paste(folder)}
     />
   );
 }

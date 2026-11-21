@@ -10,6 +10,7 @@ export {
 } from "./internal/adaptive-bar";
 export {
   AdaptiveBarItem,
+  isAdaptiveBarItem,
   type AdaptiveBarItemProps,
 } from "./internal/bar-item";
 export {

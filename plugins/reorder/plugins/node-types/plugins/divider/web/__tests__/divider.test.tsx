@@ -148,6 +148,46 @@ describe("a divider with nothing to separate hides itself", () => {
     expect(shown(container)).toEqual([true]);
   });
 
+  it("judges its neighbours through an adaptive bar's occupant boxes (a `⋯` panel)", () => {
+    // The panel docks each occupant in its own box, and hides one that came
+    // to nothing — the divider among them included.
+    function Occupant({
+      children,
+      hidden,
+    }: {
+      children?: ReactNode;
+      hidden?: boolean;
+    }) {
+      return (
+        <div data-adaptive-bar-item="x" hidden={hidden}>
+          <Item>{children}</Item>
+        </div>
+      );
+    }
+    const { container } = render(
+      <div>
+        <Occupant hidden />
+        <Occupant>
+          <Rule />
+        </Occupant>
+        <Occupant>
+          <button>a</button>
+        </Occupant>
+        <Occupant>
+          <Rule />
+        </Occupant>
+        <Occupant hidden />
+        <Occupant>
+          <Rule />
+        </Occupant>
+        <Occupant>
+          <button>b</button>
+        </Occupant>
+      </div>,
+    );
+    expect(shown(container)).toEqual([false, false, true]);
+  });
+
   it("always shows in edit mode (a draggable placeholder)", () => {
     const { container } = render(
       <ItemBindingProvider>

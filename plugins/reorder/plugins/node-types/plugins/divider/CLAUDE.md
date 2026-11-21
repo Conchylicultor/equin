@@ -24,6 +24,14 @@ closes off an empty end of the area, and a group whose items all render nothing
 leaves one rule, not two. In edit mode it always shows (a draggable
 placeholder).
 
+**In an `overflow` bucket** the divider is one of the bucket's adaptive-bar
+occupants and travels into the `⋯` panel with the actions it groups. It
+declares the `"row"` rung (`useActionForm`), so in the panel it draws flat
+whatever way the bucket's row runs; it looks through the bar's occupant boxes
+(`isAdaptiveBarItem`) to its neighbours — an occupant that came to nothing is
+`hidden` there; and it judges after layout (`afterLayout`), since the bar moves
+it into the panel in its own layout effect, after the divider's.
+
 The 6px is `xs` + `2xs` of the density ramp. Where a spacer pushes the items
 after it to the far end of a row, a divider only separates — it takes no
 slack.
@@ -41,9 +49,12 @@ insert popover, and contributes one `ReorderNodes.NodeType(...)` to the
 - Web:
   - Contributes: `ReorderNodes.NodeType` "divider"
   - Uses:
+    - `primitives/action-presentation.useActionForm`
+    - `primitives/adaptive-bar.isAdaptiveBarItem`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.useControlSize`
+    - `primitives/dom/after-layout.afterLayout`
     - `primitives/sortable-list/deferred-item.DeferredSortableItem`
     - `reorder/node-types.RemoveNodeButton`
     - `reorder/node-types.ReorderNodes`

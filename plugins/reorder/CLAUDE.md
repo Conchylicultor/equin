@@ -169,6 +169,7 @@ Because the origin default is the materialized catalog, adding/removing a contri
 - Cross-plugin:
   - Imported by:
     - `apps-core`
+    - `apps/file-explorer/browser`
     - `conversations/conversation-view/artifacts`
     - `page/editor`
     - `reorder/slot-middleware`

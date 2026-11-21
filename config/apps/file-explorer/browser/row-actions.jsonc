@@ -1,4 +1,4 @@
-// @hash 80a3aad8adc4
+// @hash 4aaf5221741c
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -8,9 +8,10 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
   // Extract here is the one action worth a glance on the row (it shows only on
-  // archives); every other action waits behind the row's `⋯`, in the Finder's
-  // order. The row's right-click menu draws this same list, in this order, as
-  // menu items.
+  // archives); every other action waits behind the row's `⋯`, grouped the
+  // Finder's way: open it, change it, move it around, keep it, get rid of it.
+  // The row's right-click menu draws this same list, in this order and with
+  // these dividers, as menu items.
   "items": [
     "apps.file-explorer.browser:extract",
     {
@@ -19,12 +20,17 @@
       "items": [
         "apps.file-explorer.browser:open",
         "apps.file-explorer.browser:reveal",
+        { "type": "divider", "id": "row-edit" },
         "apps.file-explorer.browser:rename",
-        "apps.file-explorer.browser:copy",
-        "apps.file-explorer.browser:cut",
         "apps.file-explorer.browser:compress",
+        { "type": "divider", "id": "row-clipboard" },
+        "apps.file-explorer.browser:cut",
+        "apps.file-explorer.browser:copy",
+        "apps.file-explorer.browser:paste",
         "apps.file-explorer.browser:copy-path",
+        { "type": "divider", "id": "row-keep" },
         "apps.file-explorer.places:add-to-favorites",
+        { "type": "divider", "id": "row-remove" },
         "apps.file-explorer.browser:trash",
         "apps.file-explorer.browser:delete"
       ]

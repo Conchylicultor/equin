@@ -1,4 +1,4 @@
-// @hash 80a3aad8adc4
+// @hash 4aaf5221741c
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -12,6 +12,7 @@
     "apps.file-explorer.browser:rename",
     "apps.file-explorer.browser:copy",
     "apps.file-explorer.browser:cut",
+    "apps.file-explorer.browser:paste",
     "apps.file-explorer.browser:extract",
     "apps.file-explorer.browser:compress",
     "apps.file-explorer.browser:copy-path",

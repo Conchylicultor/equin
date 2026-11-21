@@ -554,6 +554,7 @@ half in the panel reads as two broken navigations.
     - `AdaptiveBarItem`
     - `adaptiveBarReportSink`
     - `AdaptiveBarYield`
+    - `isAdaptiveBarItem`
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
@@ -561,6 +562,7 @@ half in the panel reads as two broken navigations.
     - `apps/sonata`
     - `conversations/conversation-view/prompt-templates`
     - `primitives/pane`
+    - `reorder/node-types/divider`
     - `reorder/node-types/overflow`
     - `reports/adaptive-bar`
 - Exemptions:
