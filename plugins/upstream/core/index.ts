@@ -12,6 +12,7 @@ export {
   OWN_RELEASE_NAMESPACE,
   readOwnReleases,
   releaseInCommit,
+  releaseMergedSince,
   releasesHolding,
   standingAgainst,
   upstreamReleaseNamespace,

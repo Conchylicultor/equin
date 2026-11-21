@@ -89,6 +89,11 @@ own time, and each needed a manual investigation to blame the filesystem.
     count does not depend on whether it happened to ask first. The check
     runner judges each check's own count against its declared whole-tree
     read (`checks` CLAUDE.md).
+  - CHANGE-SET work — `withChangedFilesWork(paths, fn)`: a call `fn` makes on
+    one of `paths` (the files a branch changed, resolved) counts into every
+    enclosing scope's `changedFileCalls` instead of its counts; any other
+    call counts as usual. Reading what changed is O(changes) however large
+    the change, so the whole-tree bound must not judge it.
   A summary (`FsCallSummary`: counts, total, the top 5 prefixes when it made
   ≥ 100 calls) is what durable records carry. Why: 2026-11-03's slowdown was
   mostly our own code doing far too much file work on unchanged trees, cheap
@@ -165,6 +170,7 @@ its boot journal attribute that.
     - `statSync`
     - `summarizeFsCalls`
     - `TIMED_FS_CALLS`
+    - `withChangedFilesWork`
     - `withFsCallTally`
 - Cross-plugin:
   - Imported by: 195 plugins — full list in [REFERENCE.md](./REFERENCE.md)

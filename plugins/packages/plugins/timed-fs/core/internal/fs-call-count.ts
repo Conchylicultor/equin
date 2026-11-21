@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { homedir } from "node:os";
+import { resolve } from "node:path";
 import { installSharedWorkScope } from "@plugins/packages/plugins/shared-work/core";
 import type { FsWaitLayer } from "./timed-fs";
 
@@ -43,6 +44,12 @@ const COUNT_KEY = {
 export interface FsCallTally {
   readonly counts: FsCallCounts;
   readonly byPrefix: Map<string, number>;
+  /**
+   * Calls on a file the work was handed as its input change set
+   * (`withChangedFilesWork`), counted here INSTEAD of in `counts`: they grow
+   * with the change, never with the tree.
+   */
+  changedFileCalls: number;
 }
 
 /**
@@ -78,6 +85,7 @@ export function newFsCallTally(): FsCallTally {
   return {
     counts: { stat: 0, readdir: 0, read: 0, glob: 0 },
     byPrefix: new Map(),
+    changedFileCalls: 0,
   };
 }
 
@@ -101,6 +109,40 @@ const scopes = new AsyncLocalStorage<ScopeFrame>();
  */
 export function withFsCallTally<T>(tally: FsCallTally, fn: () => T): T {
   return scopes.run({ tally, parent: scopes.getStore() }, fn);
+}
+
+/** The change set the current async context works over (`withChangedFilesWork`). */
+const changedSets = new AsyncLocalStorage<ReadonlySet<string>>();
+
+/**
+ * Run `fn` as work over a CHANGE SET: `paths` (absolute) are the files a
+ * branch changed, which `fn` was handed as its input. A call `fn` makes on one
+ * of them counts into every enclosing scope's `changedFileCalls` instead of
+ * its `counts`; every other call counts as usual.
+ *
+ * Why: a scope's count is read as "how much of the tree did this work touch"
+ * (the check runner fails a check over 1,000 undeclared calls), and work that
+ * reads exactly the files a branch changed is O(changes) by construction —
+ * however large one change is. Counting it in `counts` judged such a check
+ * by the size of its input: a 10k-file upstream merge failed format-clean as
+ * if it walked the tree. A call outside `paths` (a listing, a config read, a
+ * walk) is still counted, so the marker cannot hide a tree walk unless the
+ * caller names the whole tree as its change set — visible where it is called.
+ */
+export function withChangedFilesWork<T>(
+  paths: Iterable<string>,
+  fn: () => T,
+): T {
+  return changedSets.run(new Set([...paths].map((p) => resolve(p))), fn);
+}
+
+/** Whether `target` is a file of the current change set. */
+function onChangedFile(target: unknown): boolean {
+  const set = changedSets.getStore();
+  if (set === undefined) return false;
+  if (typeof target === "string") return set.has(resolve(target));
+  if (target instanceof URL) return set.has(resolve(target.pathname));
+  return false;
 }
 
 const sharedTallies = new Map<string, FsCallTally>();
@@ -189,6 +231,11 @@ export function countFsCall(layer: FsWaitLayer, target: unknown): void {
   const key = COUNT_KEY[layer];
   const prefix = fsCallPrefix(target);
   bump(processTally, key, prefix);
+  if (onChangedFile(target)) {
+    for (let f = scopes.getStore(); f !== undefined; f = f.parent)
+      f.tally.changedFileCalls++;
+    return;
+  }
   for (let f = scopes.getStore(); f !== undefined; f = f.parent)
     bump(f.tally, key, prefix);
 }

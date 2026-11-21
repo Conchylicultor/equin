@@ -22,6 +22,14 @@ export {
   PUBLISH_REMOTE,
 } from "./internal/publish-target";
 export { resolveUpstreamRemote } from "./internal/upstream";
+// GitHub's refusal of a push that changes a workflow file (a credential
+// without the `workflow` scope): its own arm, because the work may still land
+// on local main and only the user can grant it.
+export {
+  describeWorkflowRefusal,
+  workflowRefusal,
+} from "./internal/workflow-refusal";
+export type { WorkflowRefusal } from "./internal/workflow-refusal";
 export {
   gitConfigGet,
   gitConfigSet,

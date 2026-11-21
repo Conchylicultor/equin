@@ -106,6 +106,22 @@ at the base (its rename origin's), or `file` when the base has no such file
 
 On `main` the merge-base is HEAD, so the set is just dirty + untracked files.
 
+**An upstream merge is measured against the release it merges too.** When
+`HEAD` merges an upstream release `main` does not hold yet
+(`releaseMergedSince` from `upstream/core`: the newest
+`refs/release-tags/<remote>/` tag merged into `HEAD` and not into `main`), a
+file whose bytes are the release's is left out (upstream wrote and checked
+them), and a file the release has that the branch still changed is scoped to
+the lines that differ from the release's bytes. Without it an update's set was
+every file the release touched (~10k for 592 commits): the build reformatted
+upstream's code as the branch's own, and `format-clean` /
+`lint-directives-stable` failed the whole-tree bound on reads of it.
+
+**Reads of the set are change-scoped** (`readSources` runs under
+`packages/timed-fs`' `withChangedFilesWork`), so the check runner's whole-tree
+bound counts them apart: a branch that changes 5,000 files is still
+O(changes).
+
 ## Only the lines a branch changed are formatted
 
 `formatInScope` (`core/internal/line-scope.ts`) decides the bytes for every
@@ -206,6 +222,8 @@ idempotent and per-file.
     - `packages/macrotask-yield.createTimeSlicer`
     - `packages/timed-fs.existsSync`
     - `packages/timed-fs.readFile`
+    - `packages/timed-fs.withChangedFilesWork`
+    - `upstream.releaseMergedSince`
   - Exports (types):
     - `DirectiveDisplacement`
     - `DirectiveTarget`

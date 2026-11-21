@@ -296,6 +296,7 @@ that cannot run on this database).
     - `OWN_RELEASE_NAMESPACE`
     - `readOwnReleases`
     - `releaseInCommit`
+    - `releaseMergedSince`
     - `releasesHolding`
     - `standingAgainst`
     - `UPSTREAM_BRANCH`
@@ -311,6 +312,7 @@ that cannot run on this database).
   - Imported by:
     - `framework/cli/upstream`
     - `framework/cli/version`
+    - `framework/tooling/format`
     - `wish/github-issue`
 - Sub-plugins:
   - **`release`** — What an equin release is, as web-safe data: the release tag grammar (annotated `v<YYYY.MM.DD>[.<n>]` tags on main — parse, order, name the next one, display), the upstream.release-status live value…

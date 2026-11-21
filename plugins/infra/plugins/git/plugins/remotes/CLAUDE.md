@@ -78,6 +78,19 @@ is drawn by the prober, not by the shared table. `denied` therefore means "the
 remote refused the operation" — write access for a probe, read access for a
 fetch.
 
+## A workflow refusal is not a "no"
+
+`workflowRefusal(output)` reads GitHub's refusal of a push that changes a file
+under `.github/workflows/` with a credential that may not change workflows (an
+OAuth app's token — the `gh` CLI's login — or a classic token without the
+`workflow` scope, a GitHub App without the `workflows` permission), naming the
+credential kind and the files; `describeWorkflowRefusal` says what to grant.
+It is deliberately outside `classifyRemoteFailure` and never recorded: the
+remote accepted us as a writer and refused one kind of change, so filing it as
+`denied` would switch publishing off for a grant the user can give in one
+click. The write probe cannot see it either (`--dry-run` stops before GitHub
+looks at the commits). `push` reads it to land the work locally anyway.
+
 ## Why the answer lives in `.git/config`
 
 (`<section>` is `LEGACY_IDS.gitConfigSection`.)
@@ -194,10 +207,12 @@ that fails re-probes and records what comes back.
     - `RemoteCapture`
     - `RemoteFailure`
     - `UpstreamRemote`
+    - `WorkflowRefusal`
   - Exports (values):
     - `classifyRemoteFailure`
     - `describeAutoIdentity`
     - `describePublishTarget`
+    - `describeWorkflowRefusal`
     - `ensureCommitIdentity`
     - `gitConfigGet`
     - `gitConfigSet`
@@ -208,6 +223,7 @@ that fails re-probes and records what comes back.
     - `resolvePublishTarget`
     - `resolveUpstreamRemote`
     - `sameRepoUrl`
+    - `workflowRefusal`
 - Cross-plugin:
   - Imported by:
     - `framework/cli/git-artifacts`

@@ -55,6 +55,7 @@ import {
   getMainWorktree,
   getWorktreeRoot,
   GIT_TIMEOUT_MS,
+  noteWorkflowChanges,
   run,
   runAllowFail,
 } from "./git";
@@ -673,6 +674,8 @@ const pushAction: CliAction<
           });
 
           // The rest — normalize, checks, push — runs on the rebased code.
+          if (publish.kind === "publish")
+            await noteWorkflowChanges(publish.remote);
           await handOff(mainRoot, opSlug, pushId, "from-main", grant, profiler);
         },
         onLockRequested,
@@ -864,6 +867,8 @@ const pushAction: CliAction<
         //      push the branch, push main, fast-forward local main — runs on
         //      the REBASED code, as the land phase (`./land.ts`), inside this
         //      mutex and grant. See `./handoff.ts`.
+        if (publish.kind === "publish")
+          await noteWorkflowChanges(publish.remote);
         await handOff(root0, opSlug, pushId, "worktree", grant, profiler);
       },
       onLockRequested,

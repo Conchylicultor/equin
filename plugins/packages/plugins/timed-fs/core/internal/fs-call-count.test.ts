@@ -9,6 +9,7 @@ import {
   snapshotFsCalls,
   summarizeFsCalls,
   sharedFsCallTallies,
+  withChangedFilesWork,
   withFsCallTally,
   withSharedFsWork,
 } from "./fs-call-count";
@@ -94,4 +95,20 @@ test("a prefix keeps the first three directories under its base, never the file"
   expect(fsCallPrefix("package.json")).toBe(".");
   expect(fsCallPrefix("/etc/hosts")).toBe("/etc");
   expect(fsCallPrefix(3)).toBe("(fd)");
+});
+
+test("calls on the change set count apart, by resolved path; every other call counts as usual", async () => {
+  const tally = newFsCallTally();
+  const since = snapshotFsCalls();
+  await withFsCallTally(tally, () =>
+    withChangedFilesWork([join(dir, "sub", "..", "a.txt")], async () => {
+      await readFile(join(dir, "a.txt"));
+      await stat(join(dir, "a.txt"));
+      await stat(dir);
+    }),
+  );
+  expect(tally.changedFileCalls).toBe(2);
+  expect(summarizeFsCalls(tally)).toMatchObject({ stat: 1, read: 0, total: 1 });
+  // The process tally is every call, whatever it was about.
+  expect(fsCallsSince(since).total).toBe(3);
 });

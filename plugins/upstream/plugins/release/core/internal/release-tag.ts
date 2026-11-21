@@ -20,8 +20,9 @@ export const RELEASE_TAG_GLOB = `${RELEASE_TAG_PREFIX}*`;
 
 /**
  * The tag's shape as a POSIX extended regular expression, so the one spelling
- * serves here and outside TypeScript: the release workflow
- * (`.github/workflows/installer-release.yml`) matches tags with it in bash
+ * serves here and outside TypeScript: the release workflow's scripts
+ * (`plugins/installer/plugins/release-assets/scripts/release-config.sh`, read
+ * by `installer-release.yml`'s steps) match tags with it in bash
  * (`[[ $tag =~ $RE ]]`), held equal by the `release-assets:tag-grammar`
  * check. Only ERE syntax: `[0-9]`, not `\d`; no `(?:`. Groups: 1 year,
  * 2 month, 3 day, 5 the same-day sequence. The shape alone admits a few names

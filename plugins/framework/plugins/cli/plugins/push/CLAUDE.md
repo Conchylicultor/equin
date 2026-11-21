@@ -31,6 +31,24 @@ A push the remote REJECTS re-probes and records the answer
 so a checkout that loses write access lands in local mode next time instead of
 failing forever.
 
+**Except GitHub's workflow refusal, which still lands.** GitHub refuses an
+HTTPS push that changes a file under `.github/workflows/` unless the
+credential may change workflows (the `workflow` scope — the default `gh auth
+login` lacks it; SSH keys are never refused). An upstream release that edits
+its release workflow hits this on every clone that publishes to its own
+GitHub repo. It is not an access fact (the write probe still says yes, and
+re-probing would say so), and only the user can grant it, in a browser. So
+`execPublish` / `publishMain` read git's output (`workflowRefusal`,
+`infra/git/remotes`) and return it as `workflow-refused`: the land phase skips
+publishing `main`, still fast-forwards local `main` (it rebuilds; the update is
+in use), and ends `Done locally … NOT pushed to <remote>` with the grant for
+the credential GitHub named. Local `main` is then AHEAD of the remote, never
+diverged, and the next push after the grant publishes its commits with its
+own. Before the hand-off, the driver says when the push changes a workflow file
+(`noteWorkflowChanges`), so the warning comes before the checks, not after.
+Capturing git's output costs the live transfer progress of the two remote
+writes: it is printed when each ends (spawn has no streaming form).
+
 `--from-main` in local mode has no rebase at all (there is no `origin/main` to
 replay onto), so the commit carries the push trailer itself
 instead of receiving it from the rebase's `--exec`.
@@ -95,7 +113,8 @@ mutex the order is load-bearing:
    diverged, inherited by every new worktree, and the next push failed at its
    `--ff-only` pull. Now the remote's non-fast-forward refusal is the atomic
    gate; `publishMain` tells that race (local `main` untouched, re-run) from an
-   access refusal (re-probe, as above).
+   access refusal (re-probe, as above) and from GitHub's workflow refusal
+   (local `main` still moves — above).
 
 **Steps 3–8 run under ONE interactive CPU grant**, taken by `withPushLock` as
 the first thing inside the mutex and passed to its body (and from there to the

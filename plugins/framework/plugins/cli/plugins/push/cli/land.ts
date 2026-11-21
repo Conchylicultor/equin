@@ -7,7 +7,11 @@ import { normalizeGeneratedArtifacts } from "@plugins/framework/plugins/cli/plug
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { inheritedGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
-import { resolvePublishTarget } from "@plugins/infra/plugins/git/plugins/remotes/core";
+import {
+  describeWorkflowRefusal,
+  resolvePublishTarget,
+  type WorkflowRefusal,
+} from "@plugins/infra/plugins/git/plugins/remotes/core";
 import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
 import {
   exec,
@@ -16,6 +20,7 @@ import {
   getWorktreeRoot,
   publishMain,
   run,
+  type PublishOutcome,
 } from "./git";
 import { openLandReport, type LandPayload, type LandReporter } from "./handoff";
 
@@ -156,10 +161,11 @@ async function landWorktree(
   // 5. Push the branch (force since rebase rewrites history — safe for
   //    single-owner worktree branches). Skipped in local mode: the branch has
   //    nowhere to go, and step 7 below is what the work is for.
+  let outcome: PublishOutcome | null = null;
   if (publish.kind === "publish") {
     report.stepStart("push-branch");
     console.log(`Pushing branch ${branch}...`);
-    await execPublish(
+    outcome = await execPublish(
       ["git", "push", "--force-with-lease", "-u", publish.remote, branch],
       undefined,
       root,
@@ -169,13 +175,22 @@ async function landWorktree(
 
   // 6. Publish the branch as the remote's main — BEFORE local main moves
   //    (publishMain says why). Skipped in local mode, where local main is the
-  //    trunk and step 7 is the whole landing.
-  if (publish.kind === "publish") {
+  //    trunk and step 7 is the whole landing — and after GitHub refused the
+  //    branch's workflow file change, which it would refuse here too.
+  if (publish.kind === "publish" && outcome?.kind === "published") {
     report.stepStart("push-main");
     console.log("Pushing main...");
-    await publishMain(publish.remote, branch, root);
+    outcome = await publishMain(publish.remote, branch, root);
     report.stepEnd("push-main");
   }
+  // A workflow refusal does not stop the landing: the checks passed, the
+  // remote accepts us as a writer, and the one thing missing is a grant only
+  // the user can give. Local main moves (step 7) and rebuilds, so the update
+  // is in use; the remote catches up on the next push after the grant, which
+  // publishes local main's commits with its own. Local main is AHEAD of the
+  // remote, never diverged: nothing reached the remote, and only the race
+  // publishMain guards (another writer) could move it meanwhile.
+  const refused = outcome?.kind === "workflow-refused" ? outcome.refusal : null;
 
   // 7. Fast-forward local main (guaranteed to succeed — the driver holds the
   //    mutex, so no other push can have advanced it since our rebase). The last
@@ -198,10 +213,38 @@ async function landWorktree(
   );
   report.stepEnd("ff-merge");
 
+  if (refused !== null && publish.kind === "publish") {
+    printNotPublished(
+      refused,
+      publish.remote,
+      `${branch} merged into local main`,
+    );
+    return;
+  }
   console.log(
     publish.kind === "publish"
       ? `Done. ${branch} merged into main and pushed.`
       : `Done. ${branch} merged into local main. Nothing was pushed.`,
+  );
+}
+
+/**
+ * The end of a push that landed locally while GitHub refused its workflow file
+ * change — loud, so neither a user nor an agent reads it as published.
+ */
+function printNotPublished(
+  refusal: WorkflowRefusal,
+  remote: string,
+  landed: string,
+): void {
+  console.log(
+    [
+      ``,
+      `Done locally: ${landed}; main rebuilds from it.`,
+      `NOT pushed to ${remote}.`,
+      describeWorkflowRefusal(refusal),
+      `Then run ./equin push again (from any worktree): it publishes local main's commits with its own.`,
+    ].join("\n"),
   );
 }
 
@@ -226,8 +269,12 @@ async function landFromMain(
   if (publish.kind === "publish") {
     report.stepStart("push-main");
     console.log("Pushing main...");
-    await execPublish(["git", "push"], undefined, root);
+    const outcome = await execPublish(["git", "push"], undefined, root);
     report.stepEnd("push-main");
+    if (outcome.kind === "workflow-refused") {
+      printNotPublished(outcome.refusal, publish.remote, "committed on main");
+      return;
+    }
   }
 
   console.log(

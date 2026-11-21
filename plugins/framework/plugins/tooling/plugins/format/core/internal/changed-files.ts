@@ -10,6 +10,7 @@
 
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { releaseMergedSince } from "@plugins/upstream/core";
 import {
   type AppPath,
   joinAppPath,
@@ -111,6 +112,15 @@ function expandCoupledSets(root: AppPath, files: Set<string>): string[] {
  *
  * On `main`, `merge-base(HEAD, main) === HEAD`, so the set is just the dirty and
  * untracked files.
+ *
+ * A branch that merges an upstream release (`./equin upstream merge`) is
+ * measured against that release too: a file whose bytes are the release's is
+ * upstream's own, written and checked there, and is not in the set; a file the
+ * release has that the branch still changed (a resolved conflict, a local edit
+ * kept) is scoped to the lines that differ from the release's bytes. Without
+ * this an update's set was every file the release touched (~10k for 592
+ * commits), and the pass reformatted and re-judged upstream's code as the
+ * branch's own.
  */
 export async function listChangedFormattableFiles(
   root: AppPath,
@@ -134,6 +144,36 @@ export async function listChangedFormattableFiles(
       base,
     ]),
   );
+
+  // An upstream release this branch merges: what is identical to it is
+  // upstream's, not the branch's. `null` on every ordinary branch.
+  const release = await releaseMergedSince(root, "HEAD", base);
+  const baseRefs = new Map<string, string>();
+  for (const path of origins.keys()) baseRefs.set(path, base);
+  if (release !== null) {
+    const fromRelease = parseNameStatusZ(
+      await git(root, [
+        "diff",
+        "-M",
+        "-z",
+        "--name-status",
+        "--diff-filter=ACMR",
+        release,
+      ]),
+    );
+    for (const path of [...origins.keys()]) {
+      if (!fromRelease.has(path)) {
+        origins.delete(path);
+        baseRefs.delete(path);
+        continue;
+      }
+      const atRelease = fromRelease.get(path)!;
+      if (atRelease !== null) {
+        origins.set(path, atRelease);
+        baseRefs.set(path, release);
+      }
+    }
+  }
 
   // An agent's brand-new `.tsx` is invisible to the diff above. `git status`
   // honors `.gitignore`, so `node_modules/` and `dist/` are excluded for free.
@@ -164,7 +204,10 @@ export async function listChangedFormattableFiles(
           : {
               kind: "lines",
               // Bytes at the base, exactly: `git show` adds no trailing newline.
-              base: await git(root, ["show", `${base}:${origin}`]),
+              base: await git(root, [
+                "show",
+                `${baseRefs.get(file)!}:${origin}`,
+              ]),
             },
     });
   }

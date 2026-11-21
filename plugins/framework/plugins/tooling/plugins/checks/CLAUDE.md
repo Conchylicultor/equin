@@ -82,6 +82,14 @@ and judges them against `Check.wholeTreeRead`:
   a body near the line (one file more or fewer on some branch) cannot flip
   between the two failures.
 
+**Reads of a change set are not the tree.** A body whose work is the files a
+branch changed (format-clean, lint-directives-stable) reads them under
+`withChangedFilesWork(paths, fn)` (`packages/timed-fs`): calls on those paths
+count into the tally's `changedFileCalls`, never its counts, so the bound is
+not a limit on how large one change may be. Every other call in `fn` (a
+listing, a config read) still counts — the marker hides no walk unless its
+caller names the whole tree as the change set, in plain sight.
+
 So an O(tree) body has no silent spelling. Make it O(changes) — a fold
 (`defineFoldCheck` / `foldRepoFiles`, above), or input-keyed over a narrow
 read-set — or declare it, where `./equin check --list` prints it.

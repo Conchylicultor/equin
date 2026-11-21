@@ -7,6 +7,7 @@ import {
   fetchUpstreamStatus,
   isCouldNotAsk,
   readOwnReleases,
+  releaseMergedSince,
   releasesHolding,
   standingAgainst,
 } from "./status";
@@ -224,5 +225,34 @@ describe("the publisher's own releases", () => {
     });
     const newer = (await git(up, "rev-parse", "HEAD")).trim();
     expect(await releasesHolding(up, newer)).toEqual([]);
+  });
+});
+
+describe("releaseMergedSince", () => {
+  test("names the release an update branch merges, and nothing once main holds it", async () => {
+    const { up, clone } = await fixture("merged-since");
+    await commit(up, "b.txt", "feature");
+    await release(up, "v2026.11.14");
+    await fetchUpstreamStatus(clone); // fetches the release into its namespace
+
+    // An ordinary branch merges no release.
+    await git(clone, "checkout", "-q", "-b", "update");
+    expect(await releaseMergedSince(clone, "HEAD", "main")).toBeNull();
+
+    await git(
+      clone,
+      "merge",
+      "-q",
+      "--no-edit",
+      "refs/release-tags/upstream/v2026.11.14^{commit}",
+    );
+    expect(await releaseMergedSince(clone, "HEAD", "main")).toBe(
+      "refs/release-tags/upstream/v2026.11.14",
+    );
+
+    // Landed on main: the release is no longer this branch's to bring in.
+    await git(clone, "checkout", "-q", "main");
+    await git(clone, "merge", "-q", "--ff-only", "update");
+    expect(await releaseMergedSince(clone, "HEAD", "main")).toBeNull();
   });
 });

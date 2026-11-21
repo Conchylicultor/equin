@@ -239,6 +239,8 @@ export const CHECKOUT_SCOPES = [
  * that touches every file of a kind grows with the repo, and the bound is
  * where that cost stops being incidental — the measured O(tree) bodies made
  * 2k–17k on a ~24k-file tree, a bounded one well under a few hundred.
+ * Calls on a change set the body was handed (`withChangedFilesWork`,
+ * `packages/timed-fs`) are not counted: they grow with the change, not the tree.
  */
 export const WHOLE_TREE_FILE_CALLS = 1000;
 

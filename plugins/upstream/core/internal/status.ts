@@ -97,6 +97,9 @@ export function isCouldNotAsk(kind: RemoteFailure["kind"]): boolean {
   return kind === "unreachable" || kind === "no-credentials";
 }
 
+/** Where every remote's release namespace sits: `refs/release-tags/<remote>/`. */
+const RELEASE_NAMESPACES_ROOT = "refs/release-tags/";
+
 /** Where this checkout's OWN tags live — the releases it cuts, if it publishes. */
 export const OWN_RELEASE_NAMESPACE = "refs/tags/";
 
@@ -112,7 +115,7 @@ export const OWN_RELEASE_NAMESPACE = "refs/tags/";
  * after — nor be mistaken for one.
  */
 export function upstreamReleaseNamespace(remote: string): string {
-  return `refs/release-tags/${remote}/`;
+  return `${RELEASE_NAMESPACES_ROOT}${remote}/`;
 }
 
 /**
@@ -133,6 +136,46 @@ export async function currentRelease(
     await releaseTagsMergedInto(root, ref, namespace),
   );
   return newest.kind === "release" ? newest.tag : null;
+}
+
+/**
+ * The upstream release a branch is bringing in: the newest release tag merged
+ * into `head` that `base` does not hold, as its full ref
+ * (`refs/release-tags/<remote>/<tag>`) — or `null` when `head` merges none
+ * (an ordinary branch, the canonical repo, an update already on `base`).
+ *
+ * Read across every remote's namespace rather than the resolved upstream
+ * remote's: resolving it may probe the network, and a fetched release names
+ * its remote in its ref anyway. One `for-each-ref`, no fetch.
+ *
+ * What it is for: the bytes of a file identical to this release's were
+ * written and checked upstream, so a branch-scoped pass (the format pass and
+ * `format-clean`) leaves them out of "what this branch changed".
+ */
+export async function releaseMergedSince(
+  root: string,
+  head: string,
+  base: string,
+): Promise<string | null> {
+  const listed = await spawnExpectOk(
+    [
+      "git",
+      "for-each-ref",
+      `--merged=${head}`,
+      `--no-merged=${base}`,
+      "--format=%(refname)",
+      RELEASE_NAMESPACES_ROOT,
+    ],
+    { cwd: root, timeoutMs: LOCAL_TIMEOUT_MS },
+  );
+  const byTag = new Map<string, string>();
+  for (const ref of listed.stdout.split("\n")) {
+    if (!ref.startsWith(RELEASE_NAMESPACES_ROOT)) continue;
+    const tag = ref.slice(ref.lastIndexOf("/") + 1);
+    if (!byTag.has(tag)) byTag.set(tag, ref);
+  }
+  const newest = newestReleaseTag([...byTag.keys()]);
+  return newest.kind === "release" ? byTag.get(newest.tag)! : null;
 }
 
 /** Every `v*` tag in `namespace` whose commit is in `ref`'s history, by tag name. */

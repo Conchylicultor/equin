@@ -3,13 +3,20 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { listWorktreeEntries } from "@plugins/infra/plugins/worktree/server";
+import { mkdtemp, rm } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   spawnCaptured,
   spawnPassthrough,
+  spawnToFile,
 } from "@plugins/infra/plugins/spawn/core";
 import {
   describePublishTarget,
   recordPushRejection,
+  workflowRefusal,
+  type WorkflowRefusal,
 } from "@plugins/infra/plugins/git/plugins/remotes/core";
 
 // The git helpers both halves of a push use: the driver (`./run.ts`, up to the
@@ -73,25 +80,71 @@ export async function exec(
   }
 }
 
-// `exec` for the two commands that WRITE to the remote.
+/**
+ * How a write to the remote ended, when it did not end the push:
+ *
+ * - `published` — the remote took it.
+ * - `workflow-refused` — GitHub refused it because it changes a workflow file
+ *   and the credential may not (`workflowRefusal`, infra/git/remotes). The
+ *   remote accepted us as a writer and refused one kind of change only the
+ *   user can allow, in a browser: the caller lands the work on local `main`
+ *   anyway and says what to grant. Every other refusal still exits.
+ */
+export type PublishOutcome =
+  | { kind: "published" }
+  | { kind: "workflow-refused"; refusal: WorkflowRefusal };
+
+/**
+ * One write to the remote, its output read back.
+ *
+ * Into a file, not inherited: the refusal that decides what the push does next
+ * (a workflow file GitHub will not take from this credential) is in git's
+ * output and nowhere else, and spawn has no streaming form (it holds no JS
+ * stream to wedge). The cost is that git's transfer progress is printed when
+ * the push ends rather than as it runs, so the caller says so first.
+ */
+async function pushToRemote(
+  cmd: string[],
+  cwd?: string,
+): Promise<{ exitCode: number; output: string }> {
+  const dir = await mkdtemp(join(tmpdir(), "equin-push-"));
+  try {
+    const outputPath = asAppPath(join(dir, "git-push.log"));
+    console.log(`$ ${cmd.join(" ")}  (git's output follows when it finishes)`);
+    const { exitCode } = await spawnToFile(cmd, { cwd, outputPath });
+    const output = await readFile(outputPath, "utf8");
+    if (output.length > 0) process.stderr.write(output);
+    return { exitCode, output };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+// One of the commands that WRITE to the remote.
 //
-// A plain `exec` would exit(1) here, which is right — the push failed — but it
-// would throw away the one thing the failure teaches: a checkout that used to
-// be allowed to publish may not be any more (a revoked collaborator, a repo
-// that changed hands, a fork the user re-pointed origin at). So the refusal is
-// treated as evidence: re-probe the remote and RECORD what it says, which is
-// newer than anything the cache holds. The next push then runs in local mode
-// instead of failing the same way forever.
+// A plain `exec` would exit(1) on a refusal, which is right — the push failed —
+// but it would throw away the one thing the failure teaches: a checkout that
+// used to be allowed to publish may not be any more (a revoked collaborator, a
+// repo that changed hands, a fork the user re-pointed origin at). So the
+// refusal is treated as evidence: re-probe the remote and RECORD what it says,
+// which is newer than anything the cache holds. The next push then runs in
+// local mode instead of failing the same way forever.
 //
-// Still passthrough, so the user reads git's own error before any of this.
+// Except GitHub's refusal of a workflow file change, returned to the caller:
+// it is about one kind of change, not about access, and re-probing would only
+// report that this checkout may write (it may).
+//
+// git's own output is printed before any of this.
 export async function execPublish(
   cmd: string[],
   cwd: string | undefined,
   root: string,
-): Promise<void> {
-  const { exitCode } = await spawnPassthrough(cmd, { cwd });
-  if (exitCode === 0) return;
-  await explainPushRejection(root);
+): Promise<PublishOutcome> {
+  const { exitCode, output } = await pushToRemote(cmd, cwd);
+  if (exitCode === 0) return { kind: "published" };
+  const refusal = workflowRefusal(output);
+  if (refusal !== null) return { kind: "workflow-refused", refusal };
+  return explainPushRejection(root);
 }
 
 async function explainPushRejection(root: string): Promise<never> {
@@ -132,14 +185,16 @@ export async function publishMain(
   remote: string,
   branch: string,
   root: string,
-): Promise<void> {
-  const { exitCode } = await spawnPassthrough([
+): Promise<PublishOutcome> {
+  const { exitCode, output } = await pushToRemote([
     "git",
     "push",
     remote,
     `${branch}:refs/heads/main`,
   ]);
-  if (exitCode === 0) return;
+  if (exitCode === 0) return { kind: "published" };
+  const refusal = workflowRefusal(output);
+  if (refusal !== null) return { kind: "workflow-refused", refusal };
 
   // A refusal is either the race above or a question of access. Fetch and
   // ask which: a remote main that is no longer below the branch moved.
@@ -164,7 +219,7 @@ export async function publishMain(
     if (ancestry.stderr.trim()) console.error(ancestry.stderr.trim());
     process.exit(1);
   }
-  await explainPushRejection(root);
+  return explainPushRejection(root);
 }
 
 export async function getWorktreeRoot(): Promise<AppPath> {
@@ -187,4 +242,30 @@ export async function getMainWorktree(root: AppPath): Promise<AppPath> {
     process.exit(1);
   }
   return asAppPath(main.path);
+}
+
+// Says up front — before the checks, minutes before anything reaches the
+// remote — when this push changes a GitHub workflow file. GitHub takes such a
+// change only from a credential allowed to change workflows, and whether this
+// one is cannot be read without the credential itself, so this states what may
+// happen rather than guessing: a refusal later still lands the work locally
+// (`PublishOutcome`), and that line names the grant.
+export async function noteWorkflowChanges(remote: string): Promise<void> {
+  const changed = await run([
+    "git",
+    "diff",
+    "--name-only",
+    `${remote}/main`,
+    "HEAD",
+    "--",
+    ".github/workflows/",
+  ]);
+  if (changed.length === 0) return;
+  console.log(
+    [
+      `This push changes GitHub workflow files (${changed.split("\n").join(", ")}).`,
+      `GitHub takes that only from a login allowed to change workflows (the \`workflow\` scope; SSH keys always may).`,
+      `If it refuses, the work still lands on local main and the push says what to grant.`,
+    ].join("\n"),
+  );
 }

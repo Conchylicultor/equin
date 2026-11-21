@@ -37,6 +37,7 @@ export {
   fsCallsSince,
   summarizeFsCalls,
   FS_CALL_TOP_PREFIXES,
+  withChangedFilesWork,
 } from "./internal/fs-call-count";
 export type {
   FsCallCounts,

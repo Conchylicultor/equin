@@ -34655,6 +34655,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/macrotask-yield.createTimeSlicer`
               - `packages/timed-fs.existsSync`
               - `packages/timed-fs.readFile`
+              - `packages/timed-fs.withChangedFilesWork`
+              - `upstream.releaseMergedSince`
             - Exports (types):
               - `DirectiveDisplacement`
               - `DirectiveTarget`
@@ -38648,10 +38650,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RemoteCapture`
               - `RemoteFailure`
               - `UpstreamRemote`
+              - `WorkflowRefusal`
             - Exports (values):
               - `classifyRemoteFailure`
               - `describeAutoIdentity`
               - `describePublishTarget`
+              - `describeWorkflowRefusal`
               - `ensureCommitIdentity`
               - `gitConfigGet`
               - `gitConfigSet`
@@ -38662,6 +38666,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resolvePublishTarget`
               - `resolveUpstreamRemote`
               - `sameRepoUrl`
+              - `workflowRefusal`
           - Cross-plugin:
             - Imported by:
               - `framework/cli/git-artifacts`
@@ -45872,6 +45877,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `statSync`
           - `summarizeFsCalls`
           - `TIMED_FS_CALLS`
+          - `withChangedFilesWork`
           - `withFsCallTally`
       - Cross-plugin:
         - Imported by: 195 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
@@ -69526,6 +69532,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `OWN_RELEASE_NAMESPACE`
       - `readOwnReleases`
       - `releaseInCommit`
+      - `releaseMergedSince`
       - `releasesHolding`
       - `standingAgainst`
       - `UPSTREAM_BRANCH`
@@ -69541,6 +69548,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Imported by:
       - `framework/cli/upstream`
       - `framework/cli/version`
+      - `framework/tooling/format`
       - `wish/github-issue`
   - Plugins:
     - **`release`** — What an equin release is, as web-safe data: the release tag grammar (annotated `v<YYYY.MM.DD>[.<n>]` tags on main — parse, order, name the next one, display), the upstream.release-status live value (where this clone's main stands against the newest release upstream has cut) and the POST /api/upstream/check endpoint that re-asks upstream. A leaf, so the CLI, the server and the web read one definition.

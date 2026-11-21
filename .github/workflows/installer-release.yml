@@ -1,21 +1,25 @@
 # Publishes a release tag's GitHub Release, then builds the equin installer
-# window for it and attaches the binaries — in two phases:
+# window for it and attaches the binaries. What each job does, and why:
+# plugins/installer/plugins/release-assets (its CLAUDE.md; the contract —
+# asset names, release.json, the hand-off marker — is its core/).
 #
-# 1. `publish` (right after `validate`, ~1 min after the tag): the tag's
-#    install.sh, release.json and SHA256SUMS, with their build-provenance
-#    records (provenance.intoto.jsonl), published at once (draft → public).
-#    These files are never changed afterwards: a client reading release.json
-#    and SHA256SUMS on either side of a rewrite would see a mismatch.
-# 2. `attach` (after the window's builds): the binaries, their own provenance
-#    (installer-provenance.intoto.jsonl) and INSTALLER-SHA256SUMS, uploaded to
-#    the existing Release — INSTALLER-SHA256SUMS last, so its presence means
-#    every binary it lists is there.
+# THIS FILE IS A WRAPPER: the release logic lives in
+# plugins/installer/plugins/release-assets/scripts/ (one script per step, the
+# settings — WINDOW_ON_TAGS, RELEASE_TAG_ERE, CRATE — in release-config.sh).
+# Edit this file only to change triggers, inputs, the job graph, runners,
+# permissions or the `uses:` actions. GitHub refuses an HTTPS push that adds
+# or edits a file under .github/workflows/ unless the token has the
+# `workflow` scope (`gh auth login` does not grant it), and every clone
+# merges upstream's releases and pushes them to its own GitHub repo — so each
+# edit here breaks every user's next push.
 #
-# So a failed installer build no longer blocks the Release: the curl install's
-# stage 0 finds no INSTALLER-SHA256SUMS and installs in the terminal view.
-# 3. `release-status` (always, once the Release exists): a Release missing its
-#    window says so in its notes and fails the run loudly; a build that never
-#    got a runner is re-run once (see the job).
+# Every job runs its scripts from THIS WORKFLOW's own commit (github.sha),
+# checked out sparse into .release-ci — never from the ref it builds: a
+# manual run of a tag cut before the scripts existed (dispatched from main)
+# still has them, and runs today's release logic over that tag's tree (its
+# install.sh, mise.lock, page bundler and crate). So a script must keep
+# working over the trees of older tags, and moving the scripts directory is
+# the one logic change that edits this file (SCRIPTS below).
 #
 # - Runs on every pushed tag; only release tags (`./equin version cut`:
 #   v<YYYY.MM.DD>[.N]) go further, any other tag ends here without error.
@@ -23,18 +27,8 @@
 #   installer to an existing Release (its core files are left alone), with
 #   `replace` to republish the Release from scratch, or with `publish` off to
 #   only build any ref and keep the binaries as run artifacts.
-# - The window is OFF for now (WINDOW_ON_TAGS below): the install is
-#   terminal-only (install.sh's DEFAULT_VIEW=terminal), so a release tag only
-#   runs validate + publish (~1 min) — no macOS/Linux builds. Its release.json
-#   says `installers: null`, so stage 0 never looks for a window. A manual run
-#   with `window` on still builds (and, with publish on, attaches) it.
-# - A tag cut before the installer window existed has no crate to build: its
-#   Release carries install.sh, release.json and SHA256SUMS only, and the curl
-#   install's stage 0 installs it in the terminal view.
 #
-# Contract (asset names, release.json, the hand-off marker):
-# plugins/installer/plugins/release-assets. Design:
-# research/2026-11-17-global-installer-window.md §6, and
+# Design: research/2026-11-17-global-installer-window.md §6, and
 # research/2026-11-18-global-github-release-events.md §4 (the two phases).
 
 name: Installer release
@@ -77,28 +71,20 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Whether a pushed release tag builds the installer window. Off while the
-  # install is terminal-only (install.sh DEFAULT_VIEW=terminal): the window's
-  # builds (a macOS runner, two Linux ones) were the slow part of a release.
-  # Turn on with DEFAULT_VIEW. A manual run decides with its `window` input.
-  WINDOW_ON_TAGS: "false"
-  # The release tag grammar as a POSIX ERE. Must equal RELEASE_TAG_ERE in
-  # plugins/upstream/plugins/release/core — the release-assets:tag-grammar
-  # check holds the two equal.
-  RELEASE_TAG_ERE: '^v([0-9]{4})\.([0-9]{2})\.([0-9]{2})(\.([0-9]+))?$'
-  # The window's crate; a tag without it predates the installer window.
-  CRATE: plugins/installer/plugins/window/rust
-  # bun / rust at the exact versions mise.lock records (the repo's toolchain).
-  # Read directly rather than through mise: `mise install` would also run the
-  # repo's postinstall hooks (machine setup and the doctor), meant for a
-  # developer's machine, not a build runner.
-  READ_TOOL_VERSION: >-
-    awk -v t="$TOOL" '$0 == "[[tools." t "]]" { f = 1; next }
-    f && $1 == "version" { gsub(/"/, "", $3); print $3; exit }' mise.lock
+  # Where every job's `.release-ci` checkout puts the release scripts.
+  SCRIPTS: .release-ci/plugins/installer/plugins/release-assets/scripts
 
 jobs:
   validate:
     name: Which ref, and what to build
+    # Only the canonical repo publishes equin releases. A clone that tracks
+    # upstream carries this file unchanged (dropping it would conflict with
+    # every later upstream merge), so in the clone's own GitHub repo a pushed
+    # `v*` tag would otherwise publish a "release" of that copy. Every other
+    # job needs this one, so skipping it skips the run. The repository is
+    # SOURCE_REPO (plugins/framework/plugins/product-name), spelled out here
+    # because a workflow cannot import it.
+    if: github.repository == 'equinai/equin'
     runs-on: ubuntu-latest
     outputs:
       ref: ${{ steps.decide.outputs.ref }}
@@ -112,50 +98,19 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 0
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: .release-ci
+          sparse-checkout: plugins/installer/plugins/release-assets/scripts
+          persist-credentials: false
       - id: decide
         env:
           REF: ${{ inputs.ref || github.ref_name }}
           EVENT: ${{ github.event_name }}
-          PUBLISH: ${{ github.event_name == 'push' || inputs.publish }}
-          WANT_WINDOW: ${{ github.event_name == 'push' && env.WINDOW_ON_TAGS || inputs.window || false }}
-        run: |
-          set -euo pipefail
-          release=false
-          if [[ $REF =~ $RELEASE_TAG_ERE ]]; then release=true; fi
-          build=true
-          publish=$PUBLISH
-          if [ "$release" = false ]; then
-            if [ "$EVENT" = push ]; then
-              echo "::notice::$REF is not a release tag (v<YYYY.MM.DD>[.N]); nothing to build."
-              build=false publish=false
-            elif [ "$publish" = true ]; then
-              echo "::error::Only a release tag (v<YYYY.MM.DD>[.N]) can be published; $REF is not one. Turn publish off to only build it."
-              exit 1
-            fi
-          fi
-          if [ "$release" = true ] && [ "$(git cat-file -t "refs/tags/$REF" 2>/dev/null)" != tag ]; then
-            echo "::error::$REF is not an annotated tag: ./equin version cut writes every release tag annotated, and the Release's notes are its message."
-            exit 1
-          fi
-          window=false
-          if [ -f "$CRATE/Cargo.toml" ]; then window=true; fi
-          if [ "$window" = false ]; then
-            echo "::notice::$REF predates the installer window: its Release carries install.sh, release.json and SHA256SUMS only."
-          elif [ "$WANT_WINDOW" != true ]; then
-            echo "::notice::The installer window is off (terminal-only install): $REF's Release carries install.sh, release.json and SHA256SUMS only."
-            window=false
-          fi
-          newest="$(git tag -l 'v*' | grep -E "$RELEASE_TAG_ERE" | sort -V | tail -n 1)"
-          latest=false
-          if [ "$newest" = "$REF" ]; then latest=true; fi
-          {
-            echo "ref=$REF"
-            echo "commit=$(git rev-parse HEAD)"
-            echo "build=$build"
-            echo "window=$window"
-            echo "publish=$publish"
-            echo "latest=$latest"
-          } | tee -a "$GITHUB_OUTPUT"
+          INPUT_PUBLISH: ${{ inputs.publish }}
+          INPUT_WINDOW: ${{ inputs.window }}
+        run: bash "$SCRIPTS/decide.sh"
 
   publish:
     name: Publish the Release
@@ -177,53 +132,31 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: .release-ci
+          sparse-checkout: plugins/installer/plugins/release-assets/scripts
+          persist-credentials: false
       - name: Does the Release exist?
         id: existing
         env:
-          REPLACE: ${{ inputs.replace || false }}
-        run: |
-          set -euo pipefail
-          create=true
-          # Only "release not found" means none: any other error stops here,
-          # never mistaken for a missing Release (which would republish it).
-          if ! draft="$(gh release view "$TAG" --json isDraft --jq .isDraft 2>"$RUNNER_TEMP/view.err")"; then
-            grep -qx 'release not found' "$RUNNER_TEMP/view.err" || { cat "$RUNNER_TEMP/view.err" >&2; exit 1; }
-            draft=none
-          fi
-          if [ "$draft" = true ]; then
-            echo "::notice::$TAG has only a draft Release (an earlier publish stopped midway): publishing it from scratch."
-          elif [ "$draft" = false ]; then
-            if [ "$REPLACE" = true ]; then
-              echo "::notice::$TAG already has a Release: replacing it (replace is on)."
-            else
-              echo "::notice::$TAG already has a Release: its files are left as they are (turn replace on to republish it); only the installer is attached."
-              create=false
-            fi
-          fi
-          echo "create=$create" | tee -a "$GITHUB_OUTPUT"
+          REPLACE: ${{ inputs.replace }}
+        run: bash "$SCRIPTS/publish-existing.sh"
       - if: steps.existing.outputs.create == 'true'
         id: versions
-        run: echo "bun=$(TOOL=bun; eval "$READ_TOOL_VERSION")" | tee -a "$GITHUB_OUTPUT"
+        run: bash "$SCRIPTS/tool-version.sh" bun
       - if: steps.existing.outputs.create == 'true'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ steps.versions.outputs.bun }}
       - if: steps.existing.outputs.create == 'true'
-        run: bun install --frozen-lockfile --ignore-scripts
+        run: bash "$SCRIPTS/bun-install.sh"
       - name: Assemble release.json and SHA256SUMS
         if: steps.existing.outputs.create == 'true'
         env:
           WINDOW: ${{ needs.validate.outputs.window }}
-        run: |
-          set -euo pipefail
-          ASSETS="$RUNNER_TEMP/assets"
-          mkdir -p "$ASSETS"
-          git show "$COMMIT:install.sh" > "$ASSETS/install.sh"
-          installers=()
-          if [ "$WINDOW" = true ]; then installers=(--installers); fi
-          bun plugins/installer/plugins/release-assets/scripts/assemble.ts \
-            --mode core --tag "$TAG" --commit "$COMMIT" --dir "$ASSETS" \
-            ${installers[@]+"${installers[@]}"}
+        run: bash "$SCRIPTS/publish-assemble.sh"
       - id: attest
         if: steps.existing.outputs.create == 'true'
         uses: actions/attest-build-provenance@v4
@@ -234,19 +167,7 @@ jobs:
         env:
           LATEST: ${{ needs.validate.outputs.latest }}
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
-        run: |
-          set -euo pipefail
-          ASSETS="$RUNNER_TEMP/assets"
-          cp "$BUNDLE" "$ASSETS/provenance.intoto.jsonl"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release delete "$TAG" --yes
-          fi
-          # A draft is invisible, so `releases/latest` never names a Release
-          # whose files are still uploading: it turns public with all of them.
-          gh release create "$TAG" "$ASSETS"/* --draft --verify-tag --notes-from-tag \
-            --title "equin ${TAG#v}"
-          gh release edit "$TAG" --draft=false --latest="$LATEST"
-          gh release view "$TAG"
+        run: bash "$SCRIPTS/publish-release.sh"
 
   page:
     name: Installer page
@@ -257,15 +178,19 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.validate.outputs.commit }}
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: .release-ci
+          sparse-checkout: plugins/installer/plugins/release-assets/scripts
+          persist-credentials: false
       - id: versions
-        run: echo "bun=$(TOOL=bun; eval "$READ_TOOL_VERSION")" | tee -a "$GITHUB_OUTPUT"
+        run: bash "$SCRIPTS/tool-version.sh" bun
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ steps.versions.outputs.bun }}
-      # --ignore-scripts: the repo's postinstall provisions a developer's
-      # machine; bundling the page needs the packages only.
-      - run: bun install --frozen-lockfile --ignore-scripts
-      - run: bun plugins/installer/plugins/window/scripts/bundle-page.ts "$RUNNER_TEMP/page.html"
+      - run: bash "$SCRIPTS/bun-install.sh"
+      - run: bash "$SCRIPTS/page-bundle.sh"
       - uses: actions/upload-artifact@v7
         with:
           name: installer-page
@@ -278,13 +203,18 @@ jobs:
     runs-on: macos-15
     env:
       ASSET: equin-installer-macos-universal
-      MACOSX_DEPLOYMENT_TARGET: "11.0"
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.validate.outputs.commit }}
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: .release-ci
+          sparse-checkout: plugins/installer/plugins/release-assets/scripts
+          persist-credentials: false
       - id: versions
-        run: echo "rust=$(TOOL=rust; eval "$READ_TOOL_VERSION")" | tee -a "$GITHUB_OUTPUT"
+        run: bash "$SCRIPTS/tool-version.sh" rust
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ steps.versions.outputs.rust }}
@@ -296,35 +226,11 @@ jobs:
       - name: Build both architectures
         env:
           EQUIN_INSTALLER_PAGE: ${{ runner.temp }}/page/page.html
-        run: |
-          set -euo pipefail
-          for target in aarch64-apple-darwin x86_64-apple-darwin; do
-            cargo build --manifest-path "$CRATE/Cargo.toml" --locked --release --target "$target"
-          done
+        run: bash "$SCRIPTS/macos-build.sh"
       - name: One universal binary, ad-hoc signed
-        # lipo drops the linker's per-architecture ad-hoc signatures, and
-        # arm64 macOS refuses to run unsigned code: sign the result. Ad-hoc is
-        # enough for curl delivery (a curl download is never quarantined, so
-        # Gatekeeper never assesses it).
-        run: |
-          set -euo pipefail
-          out="$RUNNER_TEMP/dist/$ASSET"
-          mkdir -p "$(dirname "$out")"
-          lipo -create -output "$out" \
-            "$CRATE/target/aarch64-apple-darwin/release/equin-installer" \
-            "$CRATE/target/x86_64-apple-darwin/release/equin-installer"
-          codesign --force --sign - "$out"
-          codesign --verify --verbose "$out"
-          archs="$(lipo -archs "$out")"
-          echo "architectures: $archs"
-          case " $archs " in *" x86_64 "*) ;; *) exit 1 ;; esac
-          case " $archs " in *" arm64 "*) ;; *) exit 1 ;; esac
+        run: bash "$SCRIPTS/macos-universal.sh"
       - name: Smoke test
-        run: |
-          set -euo pipefail
-          "$RUNNER_TEMP/dist/$ASSET" --version
-          "$RUNNER_TEMP/dist/$ASSET" --probe
-          arch -x86_64 "$RUNNER_TEMP/dist/$ASSET" --version
+        run: bash "$SCRIPTS/macos-smoke.sh"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.ASSET }}
@@ -349,14 +255,18 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.validate.outputs.commit }}
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: .release-ci
+          sparse-checkout: plugins/installer/plugins/release-assets/scripts
+          persist-credentials: false
       - id: versions
-        run: echo "rust=$(TOOL=rust; eval "$READ_TOOL_VERSION")" | tee -a "$GITHUB_OUTPUT"
+        run: bash "$SCRIPTS/tool-version.sh" rust
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ steps.versions.outputs.rust }}
-      - run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq libwebkit2gtk-4.1-dev libgtk-3-dev xvfb
+      - run: bash "$SCRIPTS/linux-deps.sh"
       - uses: actions/download-artifact@v8
         with:
           name: installer-page
@@ -364,38 +274,11 @@ jobs:
       - name: Build
         env:
           EQUIN_INSTALLER_PAGE: ${{ runner.temp }}/page/page.html
-        run: |
-          set -euo pipefail
-          cargo build --manifest-path "$CRATE/Cargo.toml" --locked --release
-          mkdir -p "$RUNNER_TEMP/dist"
-          cp "$CRATE/target/release/equin-installer" "$RUNNER_TEMP/dist/$ASSET"
+        run: bash "$SCRIPTS/linux-build.sh"
       - name: Smoke test
-        # Inside a session bus, as on any desktop: without one (xvfb-run
-        # starts none) WebKitGTK blocks its main thread on D-Bus timeouts for
-        # ~30 s, past the probe's deadline — stage 0 never tries the window
-        # there (install.sh, choose_view).
-        run: |
-          set -euo pipefail
-          bin="$RUNNER_TEMP/dist/$ASSET"
-          "$bin" --version
-          dbus-run-session -- xvfb-run -a "$bin" --probe
-          # The real window over a dry run: every step's event reaches it.
-          # It stays open on its done screen, so `timeout` stops it (SIGTERM:
-          # the window exits with the script's code; xvfb-run then ends).
-          set +e
-          EQUIN_INSTALL_DRY_RUN_PACE=0 dbus-run-session -- xvfb-run -a timeout 60 "$bin" --script install.sh -- --dry-run | tee "$RUNNER_TEMP/window.out"
-          set -e
-          # The last step's line: every event before it reached the window.
-          # (A step with sub-steps prints as a bare heading, never a ✓ line.)
-          grep -qE '✓ Start equin$' "$RUNNER_TEMP/window.out"
+        run: bash "$SCRIPTS/linux-smoke.sh"
       - name: Without webkit2gtk, the probe fails (stage 0 then uses the terminal)
-        run: |
-          set +e
-          docker run --rm -v "$RUNNER_TEMP/dist:/dist:ro" ubuntu:22.04 "/dist/$ASSET" --probe
-          code=$?
-          set -e
-          echo "probe exit code without webkit2gtk: $code"
-          [ "$code" != 0 ]
+        run: bash "$SCRIPTS/linux-no-webkit.sh"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.ASSET }}
@@ -419,23 +302,25 @@ jobs:
     steps:
       # The workflow's own commit, for the assembling code (as in publish).
       - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: .release-ci
+          sparse-checkout: plugins/installer/plugins/release-assets/scripts
+          persist-credentials: false
       - id: versions
-        run: echo "bun=$(TOOL=bun; eval "$READ_TOOL_VERSION")" | tee -a "$GITHUB_OUTPUT"
+        run: bash "$SCRIPTS/tool-version.sh" bun
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ steps.versions.outputs.bun }}
-      - run: bun install --frozen-lockfile --ignore-scripts
+      - run: bash "$SCRIPTS/bun-install.sh"
       - uses: actions/download-artifact@v8
         with:
           pattern: equin-installer-*
           merge-multiple: true
           path: ${{ runner.temp }}/installers
       - name: Assemble INSTALLER-SHA256SUMS
-        run: |
-          set -euo pipefail
-          chmod +x "$RUNNER_TEMP/installers"/equin-installer-*
-          bun plugins/installer/plugins/release-assets/scripts/assemble.ts \
-            --mode installer --dir "$RUNNER_TEMP/installers"
+        run: bash "$SCRIPTS/attach-assemble.sh"
       - id: attest
         uses: actions/attest-build-provenance@v4
         with:
@@ -443,33 +328,11 @@ jobs:
       - name: Upload (binaries, provenance, INSTALLER-SHA256SUMS last)
         env:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
-        run: |
-          set -euo pipefail
-          DIR="$RUNNER_TEMP/installers"
-          cp "$BUNDLE" "$RUNNER_TEMP/installer-provenance.intoto.jsonl"
-          # INSTALLER-SHA256SUMS last: stage 0 reads its presence as "every
-          # binary it lists is uploaded". A re-run first removes it, so no
-          # client pairs the old sums with a new binary mid-upload.
-          if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qx INSTALLER-SHA256SUMS; then
-            gh release delete-asset "$TAG" INSTALLER-SHA256SUMS --yes
-          fi
-          gh release upload "$TAG" --clobber "$DIR"/equin-installer-*
-          gh release upload "$TAG" --clobber "$RUNNER_TEMP/installer-provenance.intoto.jsonl"
-          gh release upload "$TAG" --clobber "$DIR/INSTALLER-SHA256SUMS"
-          gh release view "$TAG"
+        run: bash "$SCRIPTS/attach-upload.sh"
 
-  # The Release says whether its window is attached. Every run that published
-  # (or found) the Release ends here, whatever the builds did:
-  # - attached: any earlier "not attached" note is taken off the notes;
-  # - not attached: the notes say so (with this run's link), the run fails
-  #   with an error naming the job — equin's release-assets watch files the
-  #   report — and, when a build job never got a runner at all (GitHub's
-  #   hosted macOS pool turned it away: "not acquired by Runner … after
-  #   multiple attempts", the job's annotation — v2026.11.18.6), the attach is
-  #   dispatched again, once: GitHub's runner capacity is outside our control,
-  #   so a single bounded re-run is the remedy, not a longer timeout (the
-  #   build itself takes ~1–2 min). A build that RAN and failed is never re-run:
-  #   that is a bug to fix.
+  # Runs whatever the builds did, once the Release exists: the Release's notes
+  # say whether its window is attached, and a build GitHub never gave a runner
+  # is re-run once (release-status-mark.sh).
   release-status:
     name: Is the window attached?
     needs: [validate, publish, page, macos, linux, attach]
@@ -486,61 +349,19 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       ATTACH: ${{ needs.attach.result }}
-      RETRIED: ${{ inputs.retried || false }}
+      RETRIED: ${{ inputs.retried }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-      BEGIN: "<!-- installer-window-status -->"
-      END: "<!-- /installer-window-status -->"
     steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: .release-ci
+          sparse-checkout: plugins/installer/plugins/release-assets/scripts
+          persist-credentials: false
       - name: Mark the Release
         id: mark
-        run: |
-          set -euo pipefail
-          body="$(gh release view "$TAG" --json body --jq .body | tr -d '\r')"
-          # The notes without any earlier status block.
-          base="$(printf '%s\n' "$body" | awk -v b="$BEGIN" -v e="$END" '
-            $0 == b { skip = 1; next } $0 == e { skip = 0; next } !skip')"
-          if [ "$ATTACH" = success ]; then
-            if [ "$base" != "$body" ]; then
-              printf '%s\n' "$base" | gh release edit "$TAG" --notes-file -
-              echo "::notice::$TAG: the installer window is attached; the 'not attached' note is removed."
-            fi
-            exit 0
-          fi
-          # Which build jobs did not succeed, and which of them GitHub never
-          # gave a runner — said by the job's own annotation, not guessed from
-          # its empty step list (a job cancelled by hand while queued has none
-          # either).
-          jobs="$(gh api --paginate "repos/$GH_REPO/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" \
-            --jq '.jobs[] | select(.name | test("^(Installer page|macOS|Linux)")) | select(.conclusion != "success" and .conclusion != "skipped") | "\(.id)\t\(.name)\t\(.conclusion)"')"
-          failed="" unacquired=0 other=0
-          while IFS=$'\t' read -r id name conclusion; do
-            [ -n "$id" ] || continue
-            failed="${failed:+$failed, }$name ($conclusion)"
-            msgs="$(gh api "repos/$GH_REPO/check-runs/$id/annotations" --jq '.[].message')"
-            if grep -q 'not acquired by Runner' <<< "$msgs"; then
-              unacquired=$((unacquired + 1))
-            else
-              other=$((other + 1))
-            fi
-          done <<< "$jobs"
-          retry=false
-          if [ "$RETRIED" != true ] && [ "$unacquired" -gt 0 ] && [ "$other" -eq 0 ]; then retry=true; fi
-          next="Re-attach it: \`gh workflow run installer-release.yml -R $GH_REPO -f ref=$TAG -f window=true\`."
-          if [ "$retry" = true ]; then next="A build never got a GitHub runner, so the attach is re-run once automatically."; fi
-          {
-            printf '%s\n\n' "$base"
-            echo "$BEGIN"
-            echo "> [!WARNING]"
-            echo "> The installer window is not attached to this release (${failed:-attach: $ATTACH}; [run]($RUN_URL))."
-            echo "> \`curl | bash\` installs it in the terminal; \`--window\` stops. $next"
-            echo "$END"
-          } | gh release edit "$TAG" --notes-file -
-          echo "retry=$retry" >> "$GITHUB_OUTPUT"
-          echo "::error::$TAG was published WITHOUT its installer window: ${failed:-attach $ATTACH}. $next"
-          exit 1
-      # The new run waits behind this one (the concurrency group), then finds
-      # the Release and only attaches.
+        run: bash "$SCRIPTS/release-status-mark.sh"
       - name: Re-run the attach once
         if: ${{ failure() && steps.mark.outputs.retry == 'true' }}
-        run: gh workflow run installer-release.yml --ref "$DEFAULT_BRANCH" -f ref="$TAG" -f window=true -f retried=true
+        run: bash "$SCRIPTS/release-status-retry.sh"

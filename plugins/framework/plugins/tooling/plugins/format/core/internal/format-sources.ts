@@ -6,7 +6,10 @@
 
 import { noteRepoWrites } from "@plugins/framework/plugins/tooling/core";
 import { writeFile } from "fs/promises";
-import { readFile } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  readFile,
+  withChangedFilesWork,
+} from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import { listChangedFormattableFiles } from "./changed-files";
@@ -47,17 +50,24 @@ async function readSources(
   root: string,
   changed: ChangedFile[],
 ): Promise<ScopedSource[]> {
-  // One at a time: a branch's first build can change hundreds of files, and a
-  // raw `readFile` per file all at once would open them all together.
-  const sources: ScopedSource[] = [];
-  for (const { file, scope } of changed) {
-    sources.push({
-      file,
-      scope,
-      content: await readFile(join(root, file), "utf8"),
-    });
-  }
-  return sources;
+  // Reads of the change set itself: O(changes) by construction, so a meter
+  // (the check runner's whole-tree bound) counts them apart from a walk.
+  return withChangedFilesWork(
+    changed.map(({ file }) => join(root, file)),
+    async () => {
+      // One at a time: a branch's first build can change hundreds of files,
+      // and a raw `readFile` per file all at once would open them all together.
+      const sources: ScopedSource[] = [];
+      for (const { file, scope } of changed) {
+        sources.push({
+          file,
+          scope,
+          content: await readFile(join(root, file), "utf8"),
+        });
+      }
+      return sources;
+    },
+  );
 }
 
 /**
