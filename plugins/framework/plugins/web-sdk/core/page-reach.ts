@@ -172,3 +172,59 @@ export async function loadAcrossReachLoss<T>(
     }
   }
 }
+
+// --- a worker that relaunches after reach loss --------------------------------
+//
+// A SharedWorker's script is a load like any other: a page that loses its reach
+// while the worker loads (a sleep, mostly — a laptop closed mid-boot kills the
+// script's request with its connection) gets the worker's `error` event, which
+// reads exactly like a script the server failed to serve or a worker that
+// crashed. `loadAcrossReachLoss` cannot wrap it (a worker is not a promise:
+// it errors through an event, and a relaunch is a new worker), so each
+// SharedWorker a page starts goes through a `WorkerRelaunch` instead: every
+// launch is marked, and the launch's error is judged against that mark.
+//
+// A relaunch takes a new generation, which the caller puts in the worker's
+// name: Firefox hands a SharedWorker made with the failed one's name within a
+// few ms of the error to the dying instance, which never loads, errors or
+// answers (measured in Playwright's Firefox 159: the same name hangs at 0–1 ms,
+// starts from 5 ms on; another name starts at once). Tabs that woke from the
+// same sleep each relaunch once, so they still share generation 1's worker.
+
+/** One start of a worker: the generation its name carries, and the page's reach then. */
+export interface WorkerLaunch {
+  /** 0 for the first launch, +1 per relaunch after a reach loss. */
+  readonly generation: number;
+  readonly reach: ReachMark;
+}
+
+export interface WorkerRelaunch {
+  /** Mark a launch, just before the worker is constructed (name it by `generation`). */
+  launch(): WorkerLaunch;
+  /**
+   * `launch`'s worker failed to load or crashed. After the page lost its reach
+   * since that launch, `relaunch` runs once the page can fetch again — the next
+   * `launch()` on a new generation — and the answer is `"relaunching"`. A
+   * failure while the page kept its reach is `"failed"`: the caller fails
+   * loudly. `relaunch` decides for itself whether it is still wanted (the
+   * caller may have closed meanwhile).
+   */
+  recover(launch: WorkerLaunch, relaunch: () => void): "relaunching" | "failed";
+}
+
+/** A relaunch policy for one worker the page starts (`what` names it in the warning). */
+export function createWorkerRelaunch(what: string): WorkerRelaunch {
+  let generation = 0;
+  return {
+    launch: () => ({ generation, reach: markPageReach() }),
+    recover(launch, relaunch) {
+      if (!pageReachLostSince(launch.reach)) return "failed";
+      console.warn(
+        `${what}: the worker failed to load while the page was hidden, offline, asleep or leaving — starting it again once the page is back`,
+      );
+      generation = Math.max(generation, launch.generation + 1);
+      void whenPageCanFetch().then(relaunch);
+      return "relaunching";
+    },
+  };
+}

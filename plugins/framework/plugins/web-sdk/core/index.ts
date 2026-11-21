@@ -51,12 +51,13 @@ export type {
 export { loadPlugins } from "./loader";
 export type { PluginEntry, PluginLoadError } from "./loader";
 export {
+  createWorkerRelaunch,
   loadAcrossReachLoss,
   markPageReach,
   pageReachLostSince,
   whenPageCanFetch,
 } from "./page-reach";
-export type { ReachMark } from "./page-reach";
+export type { ReachMark, WorkerLaunch, WorkerRelaunch } from "./page-reach";
 export {
   partitionWebEntries,
   planDeferredLoad,

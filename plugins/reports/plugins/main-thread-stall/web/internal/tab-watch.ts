@@ -1,4 +1,8 @@
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  createWorkerRelaunch,
+  type WorkerLaunch,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { webLocks } from "@plugins/primitives/plugins/dom/plugins/web-locks/core";
 import {
@@ -34,6 +38,8 @@ const PREFIX = LEGACY_IDS.browserKeyPrefix;
 /** One attachment of this tab to the watchdog: a port plus its liveness lock. */
 interface Session {
   worker: SharedWorker;
+  /** The worker's launch: its name's generation and the page's reach then. */
+  launch: WorkerLaunch;
   portId: string;
   attached: boolean;
   queue: TabToWorker[];
@@ -57,6 +63,10 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
   let frozen = false;
   let session: Session | null = null;
   let disposed = false;
+  // A watchdog that failed to load while the page lost its reach (a sleep
+  // mid-boot) is the visitor's network, not ours: started again once the page
+  // is back, on a fresh name (web-sdk's createWorkerRelaunch).
+  const relaunch = createWorkerRelaunch("main-thread-stall");
   const lockHere = webLocks();
   const locks = lockHere.kind === "supported" ? lockHere.locks : null;
   const useWorker = typeof SharedWorker !== "undefined" && locks !== null;
@@ -130,13 +140,15 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
   };
 
   function attach(): void {
+    const launch = relaunch.launch();
     // eslint-disable-next-line browser-floor/no-api-above-floor -- reached only when `useWorker` found SharedWorker (absent on Chrome Android before 148)
     const worker = new SharedWorker(
       new URL("../stall-watchdog.worker.ts", import.meta.url),
-      { type: "module", name: watchdogWorkerName(PREFIX) },
+      { type: "module", name: watchdogWorkerName(PREFIX, launch.generation) },
     );
     const s: Session = {
       worker,
+      launch,
       portId: crypto.randomUUID(),
       attached: false,
       queue: [],
@@ -146,6 +158,12 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
     worker.onerror = () => {
       if (s !== session) return;
       detach();
+      const verdict = relaunch.recover(s.launch, () => {
+        // Detached meanwhile for its own reason (disposed, a bfcache restore
+        // already re-attached): nothing to start.
+        if (session === null && !disposed) attach();
+      });
+      if (verdict === "relaunching") return;
       throw new Error(
         "main-thread-stall: the watchdog SharedWorker failed to load or crashed",
       );

@@ -35417,10 +35417,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Slot`
           - `SlotOptions`
           - `SlotReadDetail`
+          - `WorkerLaunch`
+          - `WorkerRelaunch`
         - Exports (values):
           - `catalogMismatches`
           - `Core`
           - `createPluginRegistry`
+          - `createWorkerRelaunch`
           - `defineRootSlot`
           - `defineSlot`
           - `defineSlotFacade`

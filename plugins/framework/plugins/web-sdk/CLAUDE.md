@@ -409,7 +409,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
 ## Key Design Decisions
 
 - **Per-plugin error isolation (web)** — web plugins use dynamic `import()` for per-plugin error isolation; server/central use static imports. All plugins are known at build time (the generated registry lists them)
-- **A chunk lost to the page's own reach is loaded again** — `loadPlugins` wraps each import in `loadAcrossReachLoss` (`core/page-reach.ts`): an import that failed after the tab was hidden, went offline, slept or began leaving is asked again once the page is visible and online (no timer); one that failed while the page kept its reach fails, and is reported, as before. A sleep fires no event (a laptop closed with the tab in front stays visible and online), so it is read from the page's two clocks: the wall clock runs on through it while the performance timeline pauses (`primitives/perfs/page-clock`). Visitors' "Failed to fetch dynamically imported module" on equin.ai was this — the edge saw their browsers cancel, go silent, or stop mid-load and resume 39 minutes later, never an unanswered request. `lazyComponent` loads its chunk through `loadAcrossReachLoss`, `SharedWebSocket` re-attaches when its worker failed to load across a loss, and `DemoScope` applies the same rule to its host's boot (`markPageReach` / `pageReachLostSince` / `whenPageCanFetch`). In a worker (the demo's SharedWorker host) there is no visibility, but going offline and sleeping are seen the same way (its `offline` / `online` events, its two clocks), so a worker's own chunk loads — the bundled icon sets — take the same wrapper; off a browser (bun) it is a plain call.
+- **A chunk lost to the page's own reach is loaded again** — `loadPlugins` wraps each import in `loadAcrossReachLoss` (`core/page-reach.ts`): an import that failed after the tab was hidden, went offline, slept or began leaving is asked again once the page is visible and online (no timer); one that failed while the page kept its reach fails, and is reported, as before. A sleep fires no event (a laptop closed with the tab in front stays visible and online), so it is read from the page's two clocks: the wall clock runs on through it while the performance timeline pauses (`primitives/perfs/page-clock`). Visitors' "Failed to fetch dynamically imported module" on equin.ai was this — the edge saw their browsers cancel, go silent, or stop mid-load and resume 39 minutes later, never an unanswered request. `lazyComponent` loads its chunk through `loadAcrossReachLoss`; a SharedWorker the page starts goes through `createWorkerRelaunch` (a worker errors through an event, not a promise): each launch is marked, and an `error` after a loss starts it again once the page is back, on a new generation the caller puts in the worker's name (Firefox hands a same-named worker made right after the error to the dying instance) — `SharedWebSocket` and the main-thread-stall watchdog both do; and `DemoScope` applies the same rule to its host's boot (`markPageReach` / `pageReachLostSince` / `whenPageCanFetch`). In a worker (the demo's SharedWorker host) there is no visibility, but going offline and sleeping are seen the same way (its `offline` / `online` events, its two clocks), so a worker's own chunk loads — the bundled icon sets — take the same wrapper; off a browser (bun) it is a plain call.
 - **No dependencies field** — import statements enforce dependency at build time
 - **No lifecycle hooks** — plugins use React's own lifecycle (useEffect, etc.)
 - **Slots are the only extension mechanism** — no special `root`, `background`, or other fields
@@ -465,10 +465,13 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `Slot`
     - `SlotOptions`
     - `SlotReadDetail`
+    - `WorkerLaunch`
+    - `WorkerRelaunch`
   - Exports (values):
     - `catalogMismatches`
     - `Core`
     - `createPluginRegistry`
+    - `createWorkerRelaunch`
     - `defineRootSlot`
     - `defineSlot`
     - `defineSlotFacade`

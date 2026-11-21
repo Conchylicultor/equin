@@ -52,20 +52,28 @@ export const STALL = {
 // may import no other plugin, so it never spells the prefix itself.
 const TOPIC = "main-thread-stall";
 
-/** The SharedWorker's name (identity is script URL + name). */
-export function watchdogWorkerName(prefix: string): string {
-  return `${prefix}:${TOPIC}`;
+/**
+ * The SharedWorker's name (identity is script URL + name). A relaunch after the
+ * page lost its reach while the worker loaded takes a new `generation`
+ * (`#relaunch-<n>`, web-sdk's createWorkerRelaunch): Firefox hands a same-named
+ * worker made right after the error to the dying instance.
+ */
+export function watchdogWorkerName(prefix: string, generation: number): string {
+  const base = `${prefix}:${TOPIC}`;
+  return generation === 0 ? base : `${base}#relaunch-${generation}`;
 }
 
-/** The prefix a worker was started under, read back from its own name. */
+/** The prefix a worker was started under, read back from its own name (any generation). */
 export function prefixOfWorkerName(name: string): string {
-  const suffix = `:${TOPIC}`;
-  if (!name.endsWith(suffix)) {
+  const match = new RegExp(`^(.*):${TOPIC}(?:#relaunch-[1-9][0-9]*)?$`).exec(
+    name,
+  );
+  if (match === null) {
     throw new Error(
       `main-thread-stall watchdog: unexpected worker name ${JSON.stringify(name)}`,
     );
   }
-  return name.slice(0, -suffix.length);
+  return match[1] ?? "";
 }
 
 /** The Web Lock a tab holds for its port's whole life; granted to the worker ⇒ the tab is gone. */
