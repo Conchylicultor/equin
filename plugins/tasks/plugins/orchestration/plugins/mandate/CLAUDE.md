@@ -34,7 +34,17 @@ task resolves to a policy. Plan:
   conversations' `prepareConversation`). `conversationMandate` reads it first,
   keeping the task's tree and scope; the task's agent (`message_agent`,
   `list_agents`, a role session's event delivery) is only a conversation with
-  none.
+  none. A side chat is one only while the conversation it was opened beside
+  is open: **while an attempt has an open conversation, one runs its task**
+  (tasks-core's `task-run.ts`). A conversation opened in an attempt nobody runs
+  any more runs it from the start; when the running one closes, the newest
+  open non-system side chat takes over in the close's transaction (its
+  `mandate_ref` cleared, `conversation.runHandedOver` emitted — change-notice
+  refreshes its tools and sections; a boot step is the backstop). A TASK
+  mandate change reaches only the conversation running the task with
+  sections; a side chat is told it keeps its own. `conversationMandate`
+  carries `stated` / `taskMandateId`, so a refusal can say why a
+  conversation lacks a grant its task's mandate gives.
 - **Effective mandate** — tasks-core's `tasks_ext_mandate`: every task's
   nearest `mandate_ref`, kept exact in the same transaction as each write that
   moves it (`refreshEffectiveMandates`; re-derived whole on boot), exposed as
@@ -115,6 +125,7 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `conversations/conversation-view/push-and-exit`
     - `conversations/self-compact`
     - `tasks`
+    - `tasks/orchestration/mandate/change-notice`
     - `tasks/orchestration/message`
     - `tasks/orchestration/tree-digest`
     - `tasks/orchestration/watch`

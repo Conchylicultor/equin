@@ -17717,8 +17717,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-stuck-turn"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 93 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `tasks/tasks-core` ×28
+    - Uses: 94 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `tasks/tasks-core` ×29
       - `conversations/turn-ledger` ×15
       - `conversations/transcript-watcher` ×8
       - `conversations/conversation-preprompt` ×3
@@ -25512,6 +25512,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations`
           - `database/admin`
+          - `tasks/tasks-core`
       - Core:
         - Exports (values): `FORKED_AT_SETTING`
     - **`lane-isolation`** — The end-to-end proof that the app's connection lanes are isolated all the way down to PgBouncer: with every background server slot of a throwaway database held idle in a transaction (the 2026-11-03 shape), interactive queries still answer. Test only — a child of database so it can use the throwaway-database fixture, which itself depends on database.
@@ -63565,20 +63566,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `trigger` "watch.ingest"
       - `trigger` "watch.ingest"
       - `trigger` "watch.ingest"
-    - Uses: 46 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+    - Uses: 48 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
       - `tasks/tasks-core` ×20
-      - `tasks/orchestration/mandate` ×4
+      - `tasks/orchestration/mandate` ×5
       - `tasks/task-track` ×4
       - `tasks/auto-start` ×3
       - `infra/endpoints` ×2
       - `primitives/rank` ×2
+      - `tasks/orchestration/mandate/definitions` ×2
       - `conversations/conversation-view/push-and-exit/exit-precondition.ExitClean`
       - `conversations/model-provider/catalog.getModelCatalog`
       - `database.db`
       - `infra/attachments.getAttachment`
       - `infra/mcp.Mcp`
       - `tasks/launch-options.resolveLaunchOptions`
-      - `tasks/orchestration/mandate/definitions.mandateIsKindOf`
       - `tasks/supervisor-roles.handOffToBacklog`
       - `tasks/task-category.setTaskCategory`
       - `tasks/task-source-url.setTaskSourceUrl`
@@ -64305,6 +64306,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/push-and-exit`
               - `conversations/self-compact`
               - `tasks`
+              - `tasks/orchestration/mandate/change-notice`
               - `tasks/orchestration/message`
               - `tasks/orchestration/tree-digest`
               - `tasks/orchestration/watch`
@@ -64313,20 +64315,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/supervisor-roles/events`
               - `tasks/supervisor-roles/sessions`
           - Plugins:
-            - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent every system-prompt section that follows the mandate (Mandate, Supervisor prompt, Task tree…), rendered again — and those that no longer apply named — as an event turn — its system prompt is fixed for the life of its process. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none. The delivery is sendSectionNotice, which the owner of any other state a section renders (e.g. the supervisor roles list) calls with its own lead and its own section.
+            - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent every system-prompt section that follows the mandate (Mandate, Supervisor prompt, Task tree…), rendered again — and those that no longer apply named — as an event turn (a side chat opened beside the agent running the task keeps its own mandate and is only told nothing changed for it; on conversation.runHandedOver, a side chat that takes over running its task once that agent closed gets the same refresh) — its system prompt is fixed for the life of its process. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none. The delivery is sendSectionNotice, which the owner of any other state a section renders (e.g. the supervisor roles list) calls with its own lead and its own section.
               - Server:
-                - Contributes: `trigger` "mandate-change-notice.on-change"
+                - Contributes:
+                  - `trigger` "mandate-change-notice.on-change"
+                  - `trigger` "mandate-change-notice.on-run-handed-over"
                 - Uses:
                   - `conversations.Runtime`
                   - `conversations.submitTurn`
                   - `conversations/system-prompt/composer.refreshSections`
                   - `infra/events.Trigger`
                   - `infra/jobs.defineJob`
+                  - `tasks/orchestration/mandate.conversationMandate`
+                  - `tasks/orchestration/mandate.mandateOf`
+                  - `tasks/orchestration/mandate/definitions.mandateDefinitionEntries`
+                  - `tasks/tasks-core.conversationRunHandedOver`
                   - `tasks/tasks-core.listActiveConversations`
                   - `tasks/tasks-core.taskMandateChanged`
                 - Exports (types): `SectionNotice`
                 - Exports (values): `sendSectionNotice`
-                - Register: `defineJob('mandate-change-notice.on-change')`
+                - Register:
+                  - `defineJob('mandate-change-notice.on-change')`
+                  - `defineJob('mandate-change-notice.on-run-handed-over')`
               - Cross-plugin:
                 - Imported by: `tasks/supervisor-roles`
             - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id, label and the mandates it is a kind of) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, mandateIsKindOf (is a stored mandate id a kind of a base mandate — its lineage, declared by defineMandate extends), and the mandate.definitions value (every named mandate's id, label, the mandates it is a kind of and whether a person may state it — an owned mandate is stated only by its owner's writes, and a re-file to the root states its `refiledAs` instead).
@@ -64359,6 +64369,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/automations`
                   - `tasks/mandate-presets`
                   - `tasks/orchestration/mandate`
+                  - `tasks/orchestration/mandate/change-notice`
                   - `tasks/supervisor-roles`
                   - `tasks/supervisor-roles/pane`
                   - `tasks/task-mandate`
@@ -66445,7 +66456,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `db-trigger` "tasks.cluster"
           - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
           - `live.columns.expose` "tasks ← tasks_ext_mandate"
-        - Uses: 22 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `network/live` ×3
           - `primitives/rank` ×3
           - `database/db-triggers` ×2
@@ -66454,6 +66465,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/query-resource` ×2
           - `database/derived-tables.DerivedTable`
           - `database/derived-views.View`
+          - `database/fork-point.databaseForkedAt`
           - `database.db`
           - `ids.IdKinds`
           - `infra/attachments.Attachments`
@@ -66476,6 +66488,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Conversation`
           - `ConversationCreatedPayload`
           - `ConversationKind`
+          - `ConversationRunHandedOverPayload`
           - `ConversationStatusChangedPayload`
           - `ConversationSummary`
           - `CreateAttemptInput`
@@ -66504,6 +66517,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_attemptDeliveries`
           - `_attempts`
           - `_conversationCreatedTriggers`
+          - `_conversationRunHandedOverTriggers`
           - `_conversations`
           - `_conversationStatusChangedTriggers`
           - `_pushLandedTriggers`
@@ -66519,6 +66533,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attemptConversationIdsServed`
           - `attemptDeliveriesServed`
           - `attemptEndings`
+          - `attemptHasOpenRunner`
           - `attemptPushIdsServed`
           - `attemptRetention`
           - `AttemptSchema`
@@ -66532,6 +66547,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConversationKindSchema`
           - `conversationOwnerColumns`
           - `conversationOwnerJoins`
+          - `conversationRunHandedOver`
           - `conversationRuntimesServed`
           - `ConversationSchema`
           - `conversationSessionTailsServed`
@@ -66626,6 +66642,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTriggerEvent('tasks.descriptionChanged')`
           - `defineTriggerEvent('conversation.statusChanged')`
           - `defineTriggerEvent('conversation.created')`
+          - `defineTriggerEvent('conversation.runHandedOver')`
         - Resources:
           - `attempt-conversation-ids` (keyed)
           - `attempt-conversation-ids:rows` (keyed, point)

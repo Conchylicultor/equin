@@ -436,7 +436,7 @@ serves them.
     - `db-trigger` "tasks.cluster"
     - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
     - `live.columns.expose` "tasks ← tasks_ext_mandate"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×3
     - `primitives/rank` ×3
     - `database/db-triggers` ×2
@@ -445,6 +445,7 @@ serves them.
     - `network/live/query-resource` ×2
     - `database/derived-tables.DerivedTable`
     - `database/derived-views.View`
+    - `database/fork-point.databaseForkedAt`
     - `database.db`
     - `ids.IdKinds`
     - `infra/attachments.Attachments`
@@ -467,6 +468,7 @@ serves them.
     - `Conversation`
     - `ConversationCreatedPayload`
     - `ConversationKind`
+    - `ConversationRunHandedOverPayload`
     - `ConversationStatusChangedPayload`
     - `ConversationSummary`
     - `CreateAttemptInput`
@@ -495,6 +497,7 @@ serves them.
     - `_attemptDeliveries`
     - `_attempts`
     - `_conversationCreatedTriggers`
+    - `_conversationRunHandedOverTriggers`
     - `_conversations`
     - `_conversationStatusChangedTriggers`
     - `_pushLandedTriggers`
@@ -510,6 +513,7 @@ serves them.
     - `attemptConversationIdsServed`
     - `attemptDeliveriesServed`
     - `attemptEndings`
+    - `attemptHasOpenRunner`
     - `attemptPushIdsServed`
     - `attemptRetention`
     - `AttemptSchema`
@@ -523,6 +527,7 @@ serves them.
     - `ConversationKindSchema`
     - `conversationOwnerColumns`
     - `conversationOwnerJoins`
+    - `conversationRunHandedOver`
     - `conversationRuntimesServed`
     - `ConversationSchema`
     - `conversationSessionTailsServed`
@@ -617,6 +622,7 @@ serves them.
     - `defineTriggerEvent('tasks.descriptionChanged')`
     - `defineTriggerEvent('conversation.statusChanged')`
     - `defineTriggerEvent('conversation.created')`
+    - `defineTriggerEvent('conversation.runHandedOver')`
   - Resources:
     - `attempt-conversation-ids` (keyed)
     - `attempt-conversation-ids:rows` (keyed, point)

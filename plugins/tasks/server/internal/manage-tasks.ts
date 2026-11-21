@@ -112,8 +112,8 @@ export interface ManageTasksPorts {
   /** Whether the caller owns `taskId`. */
   ownerOf: (conversationId: string, taskId: string) => Promise<OwnerAnswer>;
   /** Whether the caller's mandate grants `tasks.manage` (arm, disarm,
-   * retrack what it owns). */
-  canManage: (conversationId: string) => Promise<boolean>;
+   * retrack what it owns) — and, when not, what its mandate is. */
+  manageGrant: (conversationId: string) => Promise<ManageGrant>;
   /** Whether the caller's filing grant has `backlog` (hand-off). */
   canHandOff: (conversationId: string) => Promise<boolean>;
   /** The root task of the caller's mandate tree, or `null` when its
@@ -151,6 +151,33 @@ export interface ManageTasksPorts {
     edit: TaskEdit,
   ) => Promise<{ ok: true } | { ok: false; message: string }>;
   drop: (taskId: string) => Promise<void>;
+}
+
+/** The caller's `tasks.manage` grant: granted, or denied under `mandate` (its
+ * label) — with `side` when the conversation states its own mandate in place
+ * of its task's (`taskMandate`, a label): a side chat opened beside the
+ * conversation that runs the task. */
+export type ManageGrant =
+  | { kind: "granted" }
+  | {
+      kind: "denied";
+      mandate: string;
+      side: { taskMandate: string } | null;
+    };
+
+/** Why `start` / `track` are refused, in words: the missing grant, the
+ * mandate that lacks it and, for a side chat, why it is not its task's. */
+export function manageDeniedMessage(
+  grant: Extract<ManageGrant, { kind: "denied" }>,
+): string {
+  const lines = [
+    `\`start\` and \`track\` need the \`tasks.manage\` grant (arm, disarm, move between tracks), which this conversation's mandate — ${grant.mandate} — does not give: it may change the title, description, dependencies and owner of the tasks it owns, never how they start or which track they are on.`,
+  ];
+  if (grant.side !== null)
+    lines.push(
+      `This conversation was opened beside the one that runs your task, so it works as ${grant.mandate} whatever your task's mandate (${grant.side.taskMandate}) says; it runs your task — under ${grant.side.taskMandate} — once that conversation closes.`,
+    );
+  return lines.join(" ");
 }
 
 function refused(reason: ManageRefusal, message: string): ManageOutcome {
@@ -255,14 +282,11 @@ export async function editTask(
 
   // Launching and retracking stay a supervisor's (`tasks.manage`): an agent
   // managing what it filed changes its content, dependencies and owner only.
-  if (
-    (input.start !== undefined || input.track !== undefined) &&
-    !(await ports.canManage(conversationId))
-  )
-    return refused(
-      "not-permitted",
-      "`start` and `track` are a supervisor's to change: a sidequest you filed waits for a person (or a supervisor, once handed off) to start it.",
-    );
+  if (input.start !== undefined || input.track !== undefined) {
+    const grant = await ports.manageGrant(conversationId);
+    if (grant.kind === "denied")
+      return refused("not-permitted", manageDeniedMessage(grant));
+  }
 
   // A dependency only holds back a launch that has not happened: added to a
   // task whose agent is already running, it would stop nothing and leave the

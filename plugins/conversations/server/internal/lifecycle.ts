@@ -9,6 +9,7 @@ import {
   createAttempt,
   getAttemptRow,
   insertConversation,
+  attemptHasOpenRunner,
   getConversation,
   getConversationRuntime,
   updateConversation,
@@ -464,14 +465,18 @@ export async function prepareConversation(
 
   // Whether this conversation runs its task, or is opened BESIDE the one that
   // does (a side chat, a launch prompt: a new conversation in an existing
-  // attempt). A side conversation is a plain one: it takes none of what the
-  // task states for its own agent — not its mandate (it works as
-  // `interactive`, never a second holder of a supervisor's powers, events or
-  // tree watch), not its preprompt, not its thinking mode. A fork continues
-  // its source, so it is whatever its source is.
+  // attempt whose own conversation is still open). A side conversation is a
+  // plain one: it takes none of what the task states for its own agent — not
+  // its mandate (it works as `interactive`, never a second holder of a
+  // supervisor's powers, events or tree watch), not its preprompt, not its
+  // thinking mode. One opened in an attempt nobody runs any more (its
+  // conversations closed) carries the task on: it runs it, as a side chat
+  // does once the conversation it was opened beside closes (tasks-core's
+  // `handOverTaskRuns`). A fork continues its source, so it is whatever its
+  // source is.
   const statedMandate = opts.forkFromConversationId
     ? (inheritedMandate ?? undefined)
-    : target.kind === "reuse"
+    : target.kind === "reuse" && (await attemptHasOpenRunner(target.attemptId))
       ? interactiveMandate.id
       : undefined;
   const runsItsTask = statedMandate === undefined;

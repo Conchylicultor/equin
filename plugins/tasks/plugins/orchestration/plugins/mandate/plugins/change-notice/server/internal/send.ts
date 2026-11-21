@@ -48,3 +48,20 @@ export async function sendSectionNotice(
       `section notice: conversation ${id} stopped (${out.status}) before the notice reached it`,
     );
 }
+
+/** Types `text` into a live agent this backend runs, as an event turn; one it
+ * does not run (another namespace's, hibernated, none) gets nothing. */
+export async function sendNote(
+  conversation: { id: string; runtime: string },
+  text: string,
+): Promise<void> {
+  const { id } = conversation;
+  if (!(await Runtime.get(conversation.runtime).isRunning(id))) return;
+  const out = await submitTurn(id, { kind: "event", text, typedText: text });
+  if (out.kind === "not-found")
+    throw new Error(`note: conversation ${id} not found`);
+  if (out.kind === "stopped")
+    throw new Error(
+      `note: conversation ${id} stopped (${out.status}) before the note reached it`,
+    );
+}

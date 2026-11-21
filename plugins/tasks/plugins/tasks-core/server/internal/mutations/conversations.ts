@@ -28,6 +28,7 @@ import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { withTaskStatusBatch, type DbExecutor } from "../status-batch";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { withTaskStatusChange } from "../status-scope";
+import { handOverTaskRuns } from "./task-run";
 import type { MandateId } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 
 export interface InsertConversationInput {
@@ -571,5 +572,9 @@ export async function markConversationClosed(
       // A PgTransaction (structurally an EmitTx), as in flushStatusBatch.
       tx as EmitTx,
     );
+    // A side conversation takes over running the task once the one it was
+    // opened beside closes (`task-run.ts`) — in the close's transaction, so no
+    // attempt is left open with nobody running its task.
+    await handOverTaskRuns({ ofConversation: id }, tx);
   });
 }

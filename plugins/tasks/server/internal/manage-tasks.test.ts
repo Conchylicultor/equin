@@ -17,6 +17,9 @@ import {
 
 const SUP = "conv-sup";
 const AGENT = "conv-agent";
+// A side chat opened beside SUP's conversation: SUP's task, but it states
+// `interactive` in place of its task's Supervisor.
+const SIDE = "conv-side";
 // SUP's task is R, a supervisor root: it owns A and B (its tree) and Z
 // (another tree's root its role owns). N names a mandate of its own (M below
 // it, not SUP's); X is another tree's root, Y under it.
@@ -26,6 +29,7 @@ const roots: Record<string, string> = {
   R: "R",
   A: "R",
   B: "R",
+  C: "R",
   N: "N",
   M: "N",
   X: "X",
@@ -37,11 +41,16 @@ const roots: Record<string, string> = {
   H: "I",
   O: "I",
 };
-const callerTasks: Record<string, string> = { [SUP]: "R", [AGENT]: "I" };
+const callerTasks: Record<string, string> = {
+  [SUP]: "R",
+  [AGENT]: "I",
+  [SIDE]: "R",
+};
 /** Who owns each task: the conversation acting as its owner, else its owner
  * in words. */
 const owners: Record<string, { by: string } | { label: string }> = {
   A: { by: SUP },
+  C: { by: SIDE },
   B: { by: SUP },
   Z: { by: SUP },
   M: { label: "owned by the supervisor of task N" },
@@ -89,7 +98,16 @@ function store(
       return { kind: "not-owned", owner: owner.label };
     },
     // Only the supervisor holds tasks.manage; both may hand off.
-    canManage: async (conv) => conv === SUP,
+    manageGrant: async (conv) =>
+      conv === SUP
+        ? { kind: "granted" }
+        : conv === SIDE
+          ? {
+              kind: "denied",
+              mandate: "Interactive",
+              side: { taskMandate: "Supervisor" },
+            }
+          : { kind: "denied", mandate: "Interactive", side: null },
     canHandOff: async () => true,
     callerRoot: async (conv) => callerTasks[conv] ?? null,
     rootOf: async (id) =>
@@ -436,6 +454,31 @@ describe("an agent manages what it filed", () => {
       expect(await editTask(input, AGENT, s.ports)).toMatchObject({
         reason: "not-permitted",
       });
+    expect(s.applied).toEqual([]);
+  });
+
+  test("the refusal names the missing grant and the mandate lacking it — never a hard-coded 'sidequest you filed'", async () => {
+    const s = store();
+    const out = await editTask(
+      { task_id: "T", start: "armed" },
+      AGENT,
+      s.ports,
+    );
+    expect(out.kind).toBe("refused");
+    if (out.kind !== "refused") return;
+    expect(out.message).toContain("`tasks.manage`");
+    expect(out.message).toContain("Interactive");
+    expect(out.message).not.toContain("sidequest you filed");
+    expect(out.message).not.toContain("opened beside");
+  });
+
+  test("a side chat's refusal says it works as its own mandate, not its task's", async () => {
+    const s = store();
+    const out = await editTask({ task_id: "C", start: "armed" }, SIDE, s.ports);
+    expect(out).toMatchObject({ kind: "refused", reason: "not-permitted" });
+    if (out.kind !== "refused") return;
+    expect(out.message).toContain("opened beside the one that runs your task");
+    expect(out.message).toContain("Supervisor");
     expect(s.applied).toEqual([]);
   });
 });

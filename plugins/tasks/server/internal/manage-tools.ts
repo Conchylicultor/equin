@@ -33,10 +33,12 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { tasksFile, tasksManage } from "@plugins/tasks/plugins/tasks-core/core";
 import {
+  conversationMandate,
   granted,
   grantOf,
   Mandate,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
+import { mandateDefinitionEntries } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions/server";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { actsAsOwner, describeOwner, taskOwnership } from "./task-ownership";
 import {
@@ -64,8 +66,22 @@ const ports: ManageTasksPorts = {
       ? { kind: "owned" }
       : { kind: "not-owned", owner: describeOwner(owner) };
   },
-  canManage: async (conversationId) =>
-    (await grantOf(tasksManage, conversationId)) !== null,
+  async manageGrant(conversationId) {
+    if ((await grantOf(tasksManage, conversationId)) !== null)
+      return { kind: "granted" };
+    const mandate = await conversationMandate(conversationId);
+    if (mandate.kind === "none")
+      return { kind: "denied", mandate: "none (no task)", side: null };
+    const labels = mandateDefinitionEntries();
+    const label = (id: string) => labels.get(id)?.mandate.label ?? id;
+    return {
+      kind: "denied",
+      mandate: label(mandate.mandateId),
+      side: mandate.stated
+        ? { taskMandate: label(mandate.taskMandateId) }
+        : null,
+    };
+  },
   canHandOff: async (conversationId) =>
     (await grantOf(tasksFile, conversationId))?.backlog === true,
   async callerRoot(conversationId) {

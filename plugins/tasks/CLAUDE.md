@@ -22,20 +22,20 @@
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
-  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×20
-    - `tasks/orchestration/mandate` ×4
+    - `tasks/orchestration/mandate` ×5
     - `tasks/task-track` ×4
     - `tasks/auto-start` ×3
     - `infra/endpoints` ×2
     - `primitives/rank` ×2
+    - `tasks/orchestration/mandate/definitions` ×2
     - `conversations/conversation-view/push-and-exit/exit-precondition.ExitClean`
     - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
     - `infra/attachments.getAttachment`
     - `infra/mcp.Mcp`
     - `tasks/launch-options.resolveLaunchOptions`
-    - `tasks/orchestration/mandate/definitions.mandateIsKindOf`
     - `tasks/supervisor-roles.handOffToBacklog`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-source-url.setTaskSourceUrl`

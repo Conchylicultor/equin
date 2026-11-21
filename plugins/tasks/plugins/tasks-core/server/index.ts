@@ -45,7 +45,10 @@ import {
   taskDescriptionChanged,
   conversationStatusChanged,
   conversationCreated,
+  conversationRunHandedOver,
 } from "./internal/tables-events";
+import { handOverTaskRuns } from "./internal/mutations/task-run";
+import { databaseForkedAt } from "@plugins/database/plugins/fork-point/server";
 import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
 import { PushLedger } from "./internal/push-ledger/service";
 import { LiveColumns } from "@plugins/network/plugins/live/server";
@@ -305,6 +308,15 @@ export {
 } from "./internal/tables-events";
 export type { ConversationCreatedPayload } from "./internal/tables-events";
 
+// Emitted when a conversation opened beside its task's own one takes over
+// running the task (that one closed): it now works under the task's mandate.
+export {
+  conversationRunHandedOver,
+  _conversationRunHandedOverTriggers,
+} from "./internal/tables-events";
+export type { ConversationRunHandedOverPayload } from "./internal/tables-events";
+export { attemptHasOpenRunner } from "./internal/mutations/task-run";
+
 // Coalesce a multi-edge dependency mutation to one DB transaction and at most
 // one net tasks.statusChanged per affected task. Consumers thread the provided
 // `tx` (a DbExecutor) to the dependency mutations they call. (The same batch
@@ -384,6 +396,7 @@ export default {
     taskDescriptionChanged,
     conversationStatusChanged,
     conversationCreated,
+    conversationRunHandedOver,
   ],
   onReady: async ({ step }) => {
     // The ledger's boot catch-up: whatever landed on `main` while this backend
@@ -399,6 +412,11 @@ export default {
       step("sweep-orphaned-attempts", () => sweepOrphanedAttempts()),
       step("push-ledger", () => PushLedger.get().ensureFresh()),
       step("effective-mandates", () => reconcileEffectiveMandates()),
+      // Every close hands its attempt's run over in its own transaction; this
+      // is the backstop for conversations closed before that rule existed.
+      step("task-run-handover", async () =>
+        handOverTaskRuns({ createdAfter: await databaseForkedAt() }),
+      ),
     ]);
   },
 } satisfies ServerPluginDefinition;

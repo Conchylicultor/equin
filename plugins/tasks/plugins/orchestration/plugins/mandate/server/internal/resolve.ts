@@ -60,6 +60,11 @@ export type ConversationMandate =
       mandateId: MandateId;
       policy: MandatePolicy;
       at: GrantScope;
+      /** The mandate of its task, which `mandateId` differs from when the
+       * conversation states its own (a side chat opened beside the
+       * conversation running the task: `stated`). */
+      taskMandateId: MandateId;
+      stated: boolean;
     }
   | { kind: "none" };
 
@@ -83,9 +88,18 @@ export function conversationMandate(
     if (mandate.kind === "none") return mandate;
     const at: GrantScope =
       mandate.rootTaskId === conversation.taskId ? "root" : "below";
-    if (conversation.mandateRef === null) return { ...mandate, at };
+    const taskMandateId = mandate.mandateId;
+    if (conversation.mandateRef === null)
+      return { ...mandate, at, taskMandateId, stated: false };
     const stated = MandateIdSchema.parse(conversation.mandateRef);
-    return { ...mandate, mandateId: stated, policy: policyOf(stated), at };
+    return {
+      ...mandate,
+      mandateId: stated,
+      policy: policyOf(stated),
+      at,
+      taskMandateId,
+      stated: true,
+    };
   });
 }
 

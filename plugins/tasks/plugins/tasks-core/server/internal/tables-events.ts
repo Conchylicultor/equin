@@ -202,3 +202,23 @@ export const { event: taskMandateChanged, table: _taskMandateChangedTriggers } =
     name: "tasks.mandateChanged",
     filters: {},
   });
+
+export interface ConversationRunHandedOverPayload {
+  /** The conversations that now run their task (their `mandate_ref` cleared):
+   * each was opened beside its task's own conversation, which has closed. */
+  conversationIds: string[];
+  [key: string]: unknown;
+}
+
+// Emitted by `handOverTaskRuns` in the writing transaction (a close, or the
+// boot backstop) when a conversation opened beside its task's own one takes
+// over running the task: it now works under its task's mandate instead of the
+// one it stated, so a running agent's MCP connection and mandate sections are
+// stale. No filter columns: subscribers read `conversationIds`.
+export const {
+  event: conversationRunHandedOver,
+  table: _conversationRunHandedOverTriggers,
+} = defineTriggerEvent<ConversationRunHandedOverPayload>({
+  name: "conversation.runHandedOver",
+  filters: {},
+});

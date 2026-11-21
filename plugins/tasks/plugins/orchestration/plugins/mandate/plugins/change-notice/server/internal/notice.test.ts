@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { MANDATE_CHANGE_LEAD, noticeText } from "./notice";
+import {
+  MANDATE_CHANGE_LEAD,
+  noticeText,
+  routeMandateChange,
+  runHandedOverLead,
+  sideChatMandateNote,
+} from "./notice";
 
 describe("noticeText", () => {
   it("carries every picked section, not just the Mandate", () => {
@@ -35,5 +41,32 @@ describe("noticeText", () => {
     ]);
     expect(text.split("\n")[0]).toBe("The roles changed.");
     expect(text).toContain("<r/>");
+  });
+});
+
+describe("routeMandateChange", () => {
+  const live = [
+    { id: "runner", taskId: "T", mandateRef: null },
+    { id: "side", taskId: "T", mandateRef: "interactive" },
+    { id: "other", taskId: "U", mandateRef: null },
+  ];
+
+  it("sends the sections only to the conversation running the task", () => {
+    const { follows, side } = routeMandateChange(live, new Set(["T"]));
+    expect(follows.map((c) => c.id)).toEqual(["runner"]);
+    expect(side.map((c) => c.id)).toEqual(["side"]);
+  });
+
+  it("a side chat is told nothing changed for it, naming both mandates", () => {
+    const text = sideChatMandateNote("Supervisor", "Interactive");
+    expect(text).toContain("to Supervisor");
+    expect(text).toContain("keeps working as Interactive");
+    expect(text).toContain("NOT a request to act");
+  });
+
+  it("a hand-over names the mandate the conversation now works under", () => {
+    expect(runHandedOverLead("Supervisor")).toContain(
+      "your task's mandate — Supervisor —",
+    );
   });
 });

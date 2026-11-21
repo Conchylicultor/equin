@@ -34,6 +34,7 @@
     - `tasks/automations`
     - `tasks/mandate-presets`
     - `tasks/orchestration/mandate`
+    - `tasks/orchestration/mandate/change-notice`
     - `tasks/supervisor-roles`
     - `tasks/supervisor-roles/pane`
     - `tasks/task-mandate`
