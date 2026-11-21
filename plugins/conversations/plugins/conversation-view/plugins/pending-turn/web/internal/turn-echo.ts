@@ -44,13 +44,20 @@ export function turnEchoSamples(
     // A prompt folded into a running turn is written when it was QUEUED,
     // before the agent took it: its delivery starts at the taking.
     const writtenAt = Math.max(Date.parse(line.at), submittedAt);
+    // A `/compact` turn's line is the compaction it ran (`landed.ts`): Claude
+    // Code writes it after the model summarised, so taken → written is the
+    // compaction, not the CLI being slow to write — its own phase, which
+    // slow-ops does not count against the echo (`EXCLUDED_PHASES`).
+    const written = writtenAt - submittedAt;
+    const ranCompaction = line.kind === "compaction";
     samples.push({
       signal: "turn-echo",
       key: "jsonl-events",
       params: { id: conversationId },
       variant: row.kind,
       phases: splitPhases("turn-echo", {
-        "agent-write": writtenAt - submittedAt,
+        "agent-write": ranCompaction ? 0 : written,
+        compaction: ranCompaction ? written : 0,
         delivery: now - writtenAt,
       }),
       totalMs: now - submittedAt,

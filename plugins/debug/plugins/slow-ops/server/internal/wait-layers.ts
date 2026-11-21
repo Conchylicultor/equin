@@ -70,6 +70,8 @@ const WAIT_LAYER_HINTS: Readonly<Record<string, string>> = {
   // perfs/latency-signal `turn-echo` phases.
   "agent-write":
     "The agent took the message but its CLI was slow to write the line to its transcript.",
+  compaction:
+    "The message was a `/compact`: Claude Code writes its line only after the compaction it ran — model work the turn asked for, not counted against the echo.",
   delivery:
     "The transcript line was written but reached the tab late: the host's file watch hearing it (the `watch-delivery` ledger metric and `bg watch-delivery:<backend>` slow op), then the server and the push (the same frame's `update` slow op splits that part).",
 };

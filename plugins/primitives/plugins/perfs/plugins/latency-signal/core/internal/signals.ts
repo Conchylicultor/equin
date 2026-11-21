@@ -29,7 +29,10 @@ import { defineObservationSink } from "@plugins/primitives/plugins/report-sink/c
  * - `turn-echo`: the agent took a sent message (its ledger row's
  *   `submittedAt`) → the transcript line it wrote is in this tab's window,
  *   so its "Sending…" echo is gone. `agent-write` (taken → the line's own
- *   timestamp: the agent's CLI writing it), `delivery` (the line written →
+ *   timestamp: the agent's CLI writing it), `compaction` (for a turn whose
+ *   line Claude Code writes only AFTER the compaction it ran — `/compact` —
+ *   that taken → written span instead: the compaction itself, model work the
+ *   turn asked for, `agent-write` then 0), `delivery` (the line written →
  *   on screen: the host's watch hearing the file, the server and the push —
  *   the `update` sample of the same frame splits it further).
  */
@@ -53,7 +56,7 @@ export const CLIENT_LATENCY_SIGNALS = {
     "ack-unsplit",
     "confirm-frame",
   ],
-  "turn-echo": ["agent-write", "delivery"],
+  "turn-echo": ["agent-write", "compaction", "delivery"],
 } as const;
 
 export type ClientLatencySignal = keyof typeof CLIENT_LATENCY_SIGNALS;
@@ -74,8 +77,14 @@ export type PhaseOf<S extends ClientLatencySignal> =
  *   server judges as `bg watch-delivery:<backend>` (split at its arming). Likewise a confirm's
  *   `server` phase is the handler's time, which the server files as its own
  *   route span (`POST /api/…`) when slow.
+ * - `agent-work`: the work the sent turn itself asked the agent to do before
+ *   its line could exist — a `/compact` turn's line is written after the
+ *   compaction (~40–90 s of model time). Judging it as the echo's latency
+ *   filed every compaction as a slow echo (report-1794916751-fib0co: all six
+ *   39–86 s samples, 2026-11-16 → 11-21, were `/compact` turns sent to idle
+ *   agents, their echo itself under 1 s).
  */
-export type ExcludedPhaseOwner = "declared" | "server";
+export type ExcludedPhaseOwner = "declared" | "server" | "agent-work";
 
 /**
  * The phases of each signal that are NOT the operation's own time, each with
@@ -94,8 +103,9 @@ export const EXCLUDED_PHASES: {
   },
   // The handler's own time: the server files its route span when slow.
   confirm: { server: "server" },
-  // Both are what the user waits on; neither is judged anywhere else.
-  "turn-echo": {},
+  // `agent-write` and `delivery` are what the user waits on, judged nowhere
+  // else; a compaction is the turn's own work, not its echo.
+  "turn-echo": { compaction: "agent-work" },
 };
 
 /**

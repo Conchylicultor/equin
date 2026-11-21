@@ -18,7 +18,7 @@ ledger keeps **all** of them, as per-minute histograms.
 | `update-e2e` | the change, on the **database's** clock (an external value: its notify's `changedAt` — a file's write — else the notify) | the value is applied in the tab | browser |
 | `deliver-server` | the server notices the change | it sends the frame | server |
 | `watch-delivery` | a write to a watched file (its ctime), or the watch's arming when the write predates it | the watch hears it (before any debounce); ≤ 1 sample / watcher instance / 5 s | server (`infra/file-watcher`'s `onWatchDelivery`) |
-| `turn-echo` | the agent took a sent message (`submittedAt`) | its transcript line is on screen in the tab | browser (`turn-echo` signal) |
+| `turn-echo` | the agent took a sent message (`submittedAt`) | its transcript line is on screen in the tab — the signal's `totalMs`, so a `/compact` turn's compaction (which runs before its line is written) is in it; Slow Events judges the echo without it | browser (`turn-echo` signal) |
 | `input` | a person's click, tap or keypress (`pointerdown` / `keydown`, trusted) | the next painted frame — Event Timing's `duration` (input delay + handlers + rendering, what INP is made of) | browser (`web/internal/input-tracker.ts`) |
 | `thread-lag` | — | worst event-loop lag of each 10 s health sample | server |
 

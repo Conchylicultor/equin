@@ -10,6 +10,7 @@ number of consumers subscribe.
 |---|---|---|
 | `update` | `server-notice` · `throttle-hold` · `server-deliver` · `transport` · `page-wait` · `client-apply` | `live-state` — a pushed `update` / `delta` frame applied to the cache |
 | `confirm` | `send-lane` · `retry` · `request-queue` · `network` · `server` · `page-resume` · `ack-unsplit` · `confirm-frame` | `optimistic-mutation` — an optimistic op confirmed |
+| `turn-echo` | `agent-write` · `compaction` · `delivery` | `conversation-view/pending-turn` — a taken turn's transcript line on screen |
 
 - **update** — `server-notice`: change → first notify (`sentAt − deliverMs −
   changedAt`); `throttle-hold`: the resource's declared `throttleMs` holding the
@@ -58,7 +59,9 @@ the operation's own time, each with its owner: `declared` (held by design — an
 update's `throttle-hold`) or `server` (a window the server judges on its own
 spans — an update's `server-deliver` is exactly the server's `push
 deliver:<key>` span, so counting it here too filed one server slowness twice;
-a confirm's `server` is the handler time its route span is judged on).
+a confirm's `server` is the handler time its route span is judged on), or
+`agent-work` (work the operation's trigger itself asked for — a `/compact`
+turn's `compaction`: its line is written only after the compaction ran).
 `ownMsOf(sample)` is `totalMs` less them, which is what a consumer judging "was
 this slow" compares to its bar.
 
