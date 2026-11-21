@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import {
-  getCreatedSlots,
   slotSite,
   slotSitesTracked,
 } from "@plugins/framework/plugins/slot-declaration/core";
+import { getCreatedSlots } from "@plugins/framework/plugins/slot-declaration/core/testing";
 
 // A `bun test` process tracks slot sites from its first module on
 // (`test/track-slot-sites.ts`, imported first by the preload), so no slot in it

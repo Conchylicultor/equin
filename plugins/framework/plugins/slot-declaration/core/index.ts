@@ -1,6 +1,5 @@
 export {
   recordCreatedSlot,
-  getCreatedSlots,
   isSlot,
   collectSlots,
   declaredSlotSources,

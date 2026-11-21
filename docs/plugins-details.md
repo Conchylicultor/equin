@@ -33573,7 +33573,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `declaredSlotSources`
           - `declarePluginSlots`
           - `findUndeclaredSlots`
-          - `getCreatedSlots`
           - `isKeySpace`
           - `isSlot`
           - `KEY_SPACES`
@@ -33586,6 +33585,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slotSitesTracked`
           - `subscribeSlotsDeclared`
           - `trackSlotSites`
+      - Test helpers:
+        - Core: `@plugins/framework/plugins/slot-declaration/core/testing`
+          - `getCreatedSlots` — Every slot constructed SO FAR in this runtime.
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
         - Uses:

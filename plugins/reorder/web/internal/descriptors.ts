@@ -1,6 +1,6 @@
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { getCreatedSlots } from "@plugins/framework/plugins/slot-declaration/core";
+import type { SlotNaming } from "@plugins/framework/plugins/slot-declaration/core";
 import { reorderDirectiveDescriptor } from "../../shared/directive";
 
 /**
@@ -58,30 +58,33 @@ export interface ReorderDescriptorEntry {
 export const reorderDescriptorEntries: ReorderDescriptorEntry[] = [];
 
 /**
- * Re-derive the reorderable-slot set from one declaration pass: every created
- * slot whose `meta.reorderable` is true AND whose owner that pass settled.
+ * Re-derive the reorderable-slot set from one declaration pass: every slot THAT
+ * PASS declared whose `meta.reorderable` is true, sorted by slot id — the same
+ * derivation, in the same order, as the build's reorderable-slot manifest
+ * (`codegen/core/reorderable-slots-gen.ts`).
  *
- * A slot created but not yet declared is skipped, not guessed — it will be
- * declared by the pass that reads its plugin, and the build-time orphan guard is
- * what makes "never declared" impossible to ship.
+ * Read off the pass's own naming, never off the process's created-slot set and
+ * its `_pluginId` / `_key` stamps. The created set is in MODULE-EVALUATION
+ * order, and the stamps are the union of every pass that ever ran in this
+ * process — both a function of what else this process imported or declared,
+ * not of the declared set. The build evaluates the reorder barrel in a process
+ * that already loaded other closures, a fresh check does not, so the stored
+ * record listed these registrations in a different order than a fresh
+ * evaluation (plugin-records.verify: a slot keyed `block` stored where a fresh
+ * evaluation had one keyed `item`). Sorted by id, the list is a function of the
+ * declared set alone — the set its declared record is keyed by.
  */
-export function syncReorderDescriptors(
-  _owners: ReadonlyMap<string, PluginId>,
-): void {
+export function syncReorderDescriptors(naming: SlotNaming): void {
   reorderDescriptorEntries.length = 0;
-  for (const slot of getCreatedSlots()) {
-    if (!slot.meta.reorderable) continue;
-    // The STAMP, not a lookup by id — an undeclared slot HAS no id (it is
-    // derived from the declaring plugin), so asking the owners map about one
-    // would have to read the id to ask, and reading it is exactly what throws.
-    // The stamp is the same pass's result, reachable without naming the slot.
-    const pluginId = slot._pluginId;
-    if (pluginId === undefined || slot._key === undefined) continue;
-    const slotId = slot.id;
-    ownerBySlot.set(slotId, pluginId);
+  const entries = naming
+    .declarations()
+    .filter((entry) => entry.slot.meta.reorderable)
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  for (const { id, pluginId, key } of entries) {
+    ownerBySlot.set(id, pluginId);
     reorderDescriptorEntries.push({
-      slotId,
-      descriptor: descriptorFor(slotId, slot._key),
+      slotId: id,
+      descriptor: descriptorFor(id, key),
       pluginId,
     });
   }

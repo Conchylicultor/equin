@@ -29,7 +29,7 @@ import {
  * `ConfigV2.WebRegister` list is read by every `useConfig`, and the registry
  * keeps a slot's list (sparing all those readers a re-render) only when its
  * contributions are the same objects as before. A pass therefore only ever adds
- * registrations, in created-slot order.
+ * registrations, in slot-id order.
  *
  * Built here (not in the barrel) so `web/index.ts` stays loop-free per the
  * barrel-purity rule.
@@ -41,7 +41,7 @@ export const reorderConfigContributions: Contribution[] = [];
 const registrationByDescriptor = new Map<ConfigDescriptor, Contribution>();
 
 subscribeSlotsDeclared((naming) => {
-  syncReorderDescriptors(naming.owners);
+  syncReorderDescriptors(naming);
   reorderConfigContributions.length = 0;
   for (const entry of reorderDescriptorEntries) {
     let registration = registrationByDescriptor.get(entry.descriptor);
